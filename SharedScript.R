@@ -1,4 +1,5 @@
-# This installs the packages if you don't have them, and loads them. If you need more packages, add them to the packages vector.
+# This installs the packages if you don't have them, and loads them into your environment.
+# If you need more packages, add them to the packages vector.
 
 packages <- c("tidyverse", "faux", "DataExplorer", "randomForest", "caret", "corrplot", "modelr", "stats", "rpart.plot", "mlbench")
 
@@ -191,7 +192,7 @@ test_data <- read.csv("test.csv") %>%
          X1stFlrSF = log(X1stFlrSF),
          GrLivArea = log(GrLivArea))
 
-
+set.seed(123)
 c_lm <- train(SalePrice ~ MSSubClass +
               MSZoning +
               LotFrontage +
@@ -208,7 +209,8 @@ c_lm <- train(SalePrice ~ MSSubClass +
               Condition2 +
               BldgType +
               HouseStyle +
-              OverallQual +
+              OverallQual * # A discussion post recommended using the GrLivArea multiplied by the OverallQual
+                GrLivArea +
               OverallCond +
               YearBuilt +
               YearRemodAdd +
@@ -234,10 +236,9 @@ c_lm <- train(SalePrice ~ MSSubClass +
               HeatingQC +
               CentralAir +
               Electrical +
-              X1stFlrSF +
+              # X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
               X2ndFlrSF +
               LowQualFinSF +
-              GrLivArea +
               BsmtFullBath +
               BsmtHalfBath +
               FullBath +
@@ -245,17 +246,17 @@ c_lm <- train(SalePrice ~ MSSubClass +
               BedroomAbvGr +
               KitchenAbvGr +
               KitchenQual +
-              TotRmsAbvGrd +
+              # TotRmsAbvGrd +  # Highly correlated to 'GrLivArea'
               Functional +
               Fireplaces +
               FireplaceQu +
-              GarageType + 
+              GarageType +
               GarageYrBlt +
               GarageFinish +
               GarageCars +
               GarageCond +
               GarageQual +
-              GarageArea +
+              # GarageArea +  # Highly correlated to 'GarageCars'
               PavedDrive +
               WoodDeckSF +
               OpenPorchSF +
@@ -290,15 +291,13 @@ c_lm$results
 
 # Numeric Correlation Coefficients
 
-#Gets numeric columns as BOOLEAN
-
 t <- train_data %>%
   select(where(is.numeric))
 
 v <- t %>%
   select(-SalePrice)
 
-(o <- cor(t$SalePrice, v))
+o <- cor(t$SalePrice, v)
 
 
 # Highly correlated to each other
