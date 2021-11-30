@@ -29,8 +29,6 @@ calc_mode <- function(x){
   distinct_values[which.max(distinct_tabulate)]
 }
 
-<<<<<<< HEAD
-=======
 
 read.csv("train.csv") %>%
   sapply(function(x) sum(is.na(x)))
@@ -38,17 +36,15 @@ read.csv("train.csv") %>%
 read.csv("test.csv") %>%
   sapply(function(x) sum(is.na(x)))
 
-
->>>>>>> c686dca6a945304901509e58d3fc18e53ea038e6
 cleaner <- function(dirty_data) {
   clean_data <- dirty_data %>%
     mutate(
       MSSubClass = factor(MSSubClass, level = c(20, 30, 40, 45, 50, 60, 70, 75, 80, 85, 90, 120, 150, 160, 180, 190)),
-      MSZoning = MSZoning %>% replace_na("NoZone"),
+      MSZoning = MSZoning %>% replace_na("NoZone"), # Train data: No NAs; Test data: HAS NAs
       MSZoning = factor(MSZoning, levels = c("A", "C (all)", "FV", "I", "RH", "RL", "RP", "RM", "NoZone")),
       
       #I think this should be 0 is there is an NA Kaggle score went from 0.14012 to 0.14007
-      LotFrontage = LotFrontage %>% replace_na(0), # HAS NAs
+      LotFrontage = LotFrontage %>% replace_na(0), # Train data: HAS NAs; Test data: HAS NAs
       
       #    LotArea = factor(), # Doesn't need any mutations
       Street = factor(Street),
@@ -76,18 +72,18 @@ cleaner <- function(dirty_data) {
       RoofMatl = factor(RoofMatl),
       
       #Replacing NA with mode
-      Exterior1st = factor(Exterior1st),
+      Exterior1st = factor(Exterior1st), # Train data: No NAs; Test data: HAS 1 NA
       Exterior1st = Exterior1st %>% replace_na(calc_mode(levels(Exterior1st))),
       
-      Exterior2nd = Exterior2nd %>% replace_na("Other"),
+      Exterior2nd = Exterior2nd %>% replace_na("Other"), #Train data: No NAs; Test data: HAS 1 NA
       Exterior2nd = factor(Exterior2nd),
-      MasVnrType = MasVnrType %>% replace_na("None"), # HAS NAs
-      MasVnrType = factor(MasVnrType), # HAS NAs
-      MasVnrArea = MasVnrArea %>% replace_na(0), # HAS NAs # NAs should be replaced with 0 since we don't know what NA means in this context
+      MasVnrType = MasVnrType %>% replace_na("None"), # Train data: HAS NAs; Test data: HAS NAs
+      MasVnrType = factor(MasVnrType),
+      MasVnrArea = MasVnrArea %>% replace_na(0), # Train data: HAS NAs; Test data: No NAs # NAs should be replaced with 0 since we don't know what NA means in this context
       ExterQual = factor(ExterQual, levels = c("Po", "Fa", "TA", "Gd", "Ex")),
       ExterCond = factor(ExterCond, levels = c("Po", "Fa", "TA", "Gd", "Ex")),
       Foundation = factor(Foundation),
-      BsmtQual = BsmtQual %>% replace_na("NoBsmt"), # HAS NAs
+      BsmtQual = BsmtQual %>% replace_na("NoBsmt"), # Train data: HAS NAs; Test data: HAS NAs
       BsmtQual = factor(BsmtQual, levels = c("NoBsmt", "Po", "Fa", "TA", "Gd", "Ex")), # HAS NAs
       BsmtCond = BsmtCond %>% replace_na("NoBsmt"), # HAS NAs
       BsmtCond = factor(BsmtCond, levels = c("NoBsmt", "Po", "Fa", "TA", "Gd", "Ex")), # HAS NAs
@@ -95,37 +91,37 @@ cleaner <- function(dirty_data) {
       BsmtExposure = factor(BsmtExposure, levels = c("NoBsmt", "No", "Mn", "Av", "Gd")), # HAS NAs
       BsmtFinType1 = BsmtFinType1 %>% replace_na("NoBsmt"), # HAS NAs
       BsmtFinType1 = factor(BsmtFinType1, levels = c("NoBsmt", "Unf", "LwQ", "Rec", "BLQ", "ALQ", "GLQ")), # HAS NAs
-      BsmtFinSF1 = BsmtFinSF1 %>% replace_na(0), # HAS NAs
+      BsmtFinSF1 = BsmtFinSF1 %>% replace_na(0), # Train data: No NAs, Test data: HAS 1 NA
       BsmtFinType2 = BsmtFinType2 %>% replace_na("NoBsmt"), # HAS NAs
       BsmtFinType2 = factor(BsmtFinType2, levels = c("NoBsmt", "Unf", "LwQ", "Rec", "BLQ", "ALQ", "GLQ")),
-      BsmtFinSF2 = BsmtFinSF2 %>% replace_na(0),
-      BsmtUnfSF = BsmtUnfSF %>% replace_na(0),
-      TotalBsmtSF = TotalBsmtSF %>% replace_na(0),
+      BsmtFinSF2 = BsmtFinSF2 %>% replace_na(0), # Test data: HAS 1 NA
+      BsmtUnfSF = BsmtUnfSF %>% replace_na(0), # Test data: HAS 1 NA
+      TotalBsmtSF = TotalBsmtSF %>% replace_na(0), # Test data: HAS 1 NA
       Heating = factor(Heating),
       HeatingQC = factor(HeatingQC, levels = c("Po", "Fa", "TA", "Gd", "Ex")),
       CentralAir = factor(CentralAir),
-      Electrical = Electrical %>% replace_na("Mix"), # HAS NAs
-      Electrical = factor(Electrical), # HAS NAs
+      Electrical = Electrical %>% replace_na("Mix"), # Train data: HAS NA; Test data: No NAs
+      Electrical = factor(Electrical), # HAS NA
       #   1stFlrSF = factor(), # Probably doesn't need any mutations
       #   2ndFlrSF = factor(), # Probably doesn't need any mutations
       #   LowQualFinSF = factor(), # Probably doesn't need any mutations
       #    GrLivArea   = factor(), # Probably doesn't need any mutations
       
-      BsmtFullBath  = BsmtFullBath %>% replace_na(0),
-      BsmtHalfBath  = BsmtHalfBath %>% replace_na(0),
+      BsmtFullBath  = BsmtFullBath %>% replace_na(0), # Test data: HAS 2 NAs
+      BsmtHalfBath  = BsmtHalfBath %>% replace_na(0), # Test data: HAS 2 NAs
       
       #    FullBath = factor(), # Probably doesn't need any mutations
       #    HalfBath = factor(), # Probably doesn't need any mutations
       #    BedroomAbvGr = factor(), # Probably doesn't need any mutations
       #    KitchenAbvGr = factor(), # Probably doesn't need any mutations
       
-      KitchenQual = KitchenQual %>% replace_na("TA"),
+      KitchenQual = KitchenQual %>% replace_na("TA"), # Test data: has 1 NA
       KitchenQual = factor(KitchenQual, levels = c("Po", "Fa", "TA", "Gd", "Ex")),
       
       #    KitchenQual = as.numeric(KQ_factor), #might need to be as.numeric(KitchenQual)
       #    TotRmsAbvGrd = factor(), # Probably doesn't need any mutations
       
-      Functional = Functional %>% replace_na("Typ"),
+      Functional = Functional %>% replace_na("Typ"), # Test data: has 2 NAs
       Functional = factor(Functional, levels = c("Sal", "Sev", "Maj2", "Maj1", "Mod", "Min2", "Min1", "Typ")),
       
       #    Fireplaces = factor(), # Probably doesn't need any mutations
@@ -141,7 +137,7 @@ cleaner <- function(dirty_data) {
       GarageFinish = GarageFinish  %>% replace_na("NoGrge"), # HAS NAs
       GarageFinish = factor(GarageFinish), # NAs should specify no garage # HAS NAs
       
-      GarageCars = GarageCars %>% replace_na(0),
+      GarageCars = GarageCars %>% replace_na(0), # Test data: HAS 1 NA
       
       GarageArea = GarageArea %>% replace_na(0),
       
@@ -174,7 +170,7 @@ cleaner <- function(dirty_data) {
       #    YrSold = factor(), # Probably doesn't need any mutations
       
       SaleType = factor(SaleType),
-      SaleType = SaleType %>% replace_na(calc_mode(levels(SaleType))),
+      SaleType = SaleType %>% replace_na(calc_mode(levels(SaleType))), # Test data has 1 NA
 
       SaleCondition = factor(SaleCondition)
     )
@@ -189,70 +185,6 @@ train_data <- read.csv("train.csv") %>%
          X1stFlrSF = log(X1stFlrSF),
          GrLivArea = log(GrLivArea))
 
-<<<<<<< HEAD
-# Categorical Correlation Coefficients
-
-f_d <- train_data %>%
-  select(where(is.character))
-
-f_o <- data.frame("Test", .12)
-names(f_o) <- c("Feature", "R2")
-f_o
-
-for (i in colnames(f_d)) {
-  (f_lm <- lm(train_data$SalePrice ~ train_data[[i]]) %>% summary)
-  f_o <- f_o %>% add_row(Feature = i, R2 = round(f_lm$adj.r.squared,2))
-}
-
-f_o %>%
-  arrange(f_o$R2)
-
-
-# GarageFinish 0.27
-# Alley 0.28
-# BsmtQual 0.45
-# KitchenQual 0.46
-# ExterQual 0.48
-# Neighborhood 0.54
-
-
-#.662
-(m_lm <- lm(SalePrice ~ YearBuilt + LotArea + Neighborhood + HouseStyle + GarageArea, data = train_data)) %>% summary
-
-
-#.7556
-(m_lm <- lm(SalePrice ~ OverallQual + BsmtQual + KitchenQual + ExterQual + Neighborhood, data = train_data)) %>%
-  summary
-
-#.7603
-(m_lm <- lm(SalePrice ~ OverallQual + GrLivArea + TotalBsmtSF + GarageCars + GarageArea, data = train_data)) %>%
-  summary
-
-#.8042 # Check out this model
-(m_lm <- lm(log(SalePrice) ~ OverallQual * GrLivArea + TotalBsmtSF + GarageCars + Neighborhood, data = train_data)) %>%
-  summary
-
-#.8073
-(m_lm <- lm(SalePrice ~ OverallQual + GrLivArea + TotalBsmtSF + ExterQual + Neighborhood, data = train_data)) %>%
-  summary
-
-#.8094
-(m_lm <- lm(log(SalePrice) ~ OverallQual * GrLivArea + KitchenQual + ExterQual + Neighborhood, data = train_data)) %>%
-  summary
-
-#.8243
-train_x <- train_data %>%
-  select(OverallQual, GrLivArea, KitchenQual, ExterQual, Neighborhood) %>%
-  mutate(GrLivArea = log(GrLivArea))
-
-
-# getFeat
-
-c_lm <- train(train_x, log(train_data$SalePrice), method = "lm")
-
-#In-sample performance, R^2 = 0.8424
-summary(c_lm)$r.squared
-=======
 test_data <- read.csv("test.csv") %>%
   cleaner() %>%
   mutate(LotArea = log(LotArea),
@@ -346,21 +278,59 @@ c_lm <- train(SalePrice ~ MSSubClass +
 
 #In-sample performance
 summary(c_lm)
->>>>>>> c686dca6a945304901509e58d3fc18e53ea038e6
 rmse(train_data$SalePrice, exp(fitted(c_lm)))
 rmsle(train_data$SalePrice, exp(fitted(c_lm)))
 
 #Out-of-sample performance
 c_lm$results
 
+###############################################################
 
-<<<<<<< HEAD
-# From this most recent model ^
-# 0.7885 without OverallQual
-# 0.7473 without grLivArea
-# 0.7983 without KitchenQual
-# 0.8038 without ExterQual
-# 0.7596 without neighborhood
+# Identify Highly correlated predictors
+
+# Numeric Correlation Coefficients
+
+#Gets numeric columns as BOOLEAN
+
+t <- train_data %>%
+  select(where(is.numeric))
+
+v <- t %>%
+  select(-SalePrice)
+
+(o <- cor(t$SalePrice, v))
+
+
+# Highly correlated to each other
+correlMatrix <- cor(v[,2:31])
+(highCorrel <- findCorrelation(correlMatrix, cutoff=0.75, names = TRUE, verbose = TRUE))
+print(correlMatrix[,highCorrel])
+
+cor(train_data$GrLivArea, train_data$TotRmsAbvGrd)
+train_data %>%
+  ggplot(aes(GrLivArea, TotRmsAbvGrd)) +
+  geom_point()
+
+cor(train_data$GrLivArea, train_data$SalePrice)
+cor(train_data$TotRmsAbvGrd, train_data$SalePrice) # Remove TotRmsAbvGrd from model?
+
+cor(train_data$X1stFlrSF, train_data$TotalBsmtSF)
+train_data %>%
+  ggplot(aes(X1stFlrSF, TotalBsmtSF)) +
+  geom_point()
+
+cor(train_data$X1stFlrSF, train_data$SalePrice) # Remove X1stFlrSF from model?
+cor(train_data$TotalBsmtSF, train_data$SalePrice)
+
+
+cor(train_data$GarageArea, train_data$GarageCars)
+train_data %>%
+  ggplot(aes(GarageArea, GarageCars)) +
+  geom_point()
+
+cor(train_data$GarageArea, train_data$SalePrice) # Remove Garage Area from model?
+cor(train_data$GarageCars, train_data$SalePrice)
+
 
 ###############################################################
 
@@ -386,8 +356,6 @@ plot(c_rf)
 
 ###############################################################
 
-set.seed(123)
-correlat
 
 
 # We need to do all the manipulations to the data we are going to be testing as we do to the train data. Once that dataframe is defined, we can apply the predict function with the linear model of our choosing.
@@ -398,12 +366,7 @@ correlat
 
 # submission_data <- add_predictions(test_data, m_lm, var = "SalePrice")
 
-text_x <- test_data %>%
-  select(OverallQual, GrLivArea, KitchenQual, ExterQual, Neighborhood) %>%
-  mutate(GrLivArea = log(GrLivArea))
 
-=======
->>>>>>> c686dca6a945304901509e58d3fc18e53ea038e6
 submission_data <- test_data %>%
   select(Id) %>%
   mutate(SalePrice = exp(predict(c_lm, test_data)))
