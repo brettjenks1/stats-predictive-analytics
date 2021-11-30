@@ -1,6 +1,6 @@
 # This installs the packages if you don't have them, and loads them. If you need more packages, add them to the packages vector.
 
-packages <- c("tidyverse", "faux", "DataExplorer", "randomForest", "caret", "corrplot", "modelr")
+packages <- c("tidyverse", "faux", "DataExplorer", "randomForest", "caret", "corrplot", "modelr", "stats")
 
 package.check <- lapply(
   packages,
