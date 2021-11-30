@@ -1,6 +1,6 @@
 # This installs the packages if you don't have them, and loads them. If you need more packages, add them to the packages vector.
 
-packages <- c("tidyverse", "faux", "DataExplorer", "randomForest", "caret", "corrplot", "modelr", "stats")
+packages <- c("tidyverse", "faux", "DataExplorer", "randomForest", "caret", "corrplot", "modelr", "stats", "rpart.plot", "mlbench")
 
 package.check <- lapply(
   packages,
@@ -18,6 +18,15 @@ rmse <- function(actual, fitted){
 
 rmsle <- function(actual, fitted) {
   sqrt(mean((log(fitted+1) - log(actual+1))^2))
+}
+
+calc_mode <- function(x){
+  # List the distinct / unique values
+  distinct_values <- na.omit(unique(x))
+  # Count the occurrence of each distinct value
+  distinct_tabulate <- tabulate(match(x, distinct_values))
+  # Return the value with the highest occurrence
+  distinct_values[which.max(distinct_tabulate)]
 }
 
 cleaner <- function(dirty_data) {
@@ -238,8 +247,8 @@ f_o %>%
 (m_lm <- lm(SalePrice ~ OverallQual + GrLivArea + TotalBsmtSF + GarageCars + GarageArea, data = train_data)) %>%
   summary
 
-#.8042
-(m_lm <- lm(SalePrice ~ OverallQual + GrLivArea + TotalBsmtSF + GarageCars + Neighborhood, data = train_data)) %>%
+#.8042 # Check out this model
+(m_lm <- lm(log(SalePrice) ~ OverallQual * GrLivArea + TotalBsmtSF + GarageCars + Neighborhood, data = train_data)) %>%
   summary
 
 #.8073
@@ -247,7 +256,7 @@ f_o %>%
   summary
 
 #.8094
-(m_lm <- lm(SalePrice ~ OverallQual + GrLivArea + KitchenQual + ExterQual + Neighborhood, data = train_data)) %>%
+(m_lm <- lm(log(SalePrice) ~ OverallQual * GrLivArea + KitchenQual + ExterQual + Neighborhood, data = train_data)) %>%
   summary
 
 #.8243
@@ -256,6 +265,7 @@ train_x <- train_data %>%
   mutate(GrLivArea = log(GrLivArea))
 
 
+# getFeat
 
 c_lm <- train(train_x, log(train_data$SalePrice), method = "lm")
 
@@ -274,6 +284,33 @@ c_lm$results
 # 0.7983 without KitchenQual
 # 0.8038 without ExterQual
 # 0.7596 without neighborhood
+
+###############################################################
+
+# Attempting a Random Forest Model
+set.seed(123)
+inTrain <- createDataPartition(train_data[,"SalePrice"],p=0.8, list=FALSE)
+rf.train <- train_data[train,]
+rf.test <- train_data[-train,]
+
+ctrl <- trainControl(method = "cv", number = 10)
+
+set.seed(123)
+c_rf <- randomForest(SalePrice ~ OverallQual + GrLivArea + KitchenQual + ExterQual + Neighborhood,
+                     data = train_data,
+                     mtry = 2,
+                     importance = TRUE,
+                     na.action = na.omit)
+
+print(c_rf)
+plot(c_rf)
+(rf_pred <- predict(c_rf, data.test))
+# (confusionMatrix(table(rf.test[,"SalePrice"],pred)))
+
+###############################################################
+
+set.seed(123)
+correlat
 
 
 # We need to do all the manipulations to the data we are going to be testing as we do to the train data. Once that dataframe is defined, we can apply the predict function with the linear model of our choosing.
