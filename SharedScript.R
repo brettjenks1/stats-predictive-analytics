@@ -172,7 +172,7 @@ cleaner <- function(dirty_data) {
       
       SaleType = factor(SaleType),
       SaleType = SaleType %>% replace_na(calc_mode(levels(SaleType))), # Test data has 1 NA
-
+      
       SaleCondition = factor(SaleCondition)
     )
   return(clean_data)
@@ -194,84 +194,84 @@ test_data <- read.csv("test.csv") %>%
 
 set.seed(123)
 c_lm <- train(SalePrice ~ MSSubClass +
-              MSZoning +
-              LotFrontage +
-              LotArea +
-              Street +
-              Alley +
-              LotShape +
-              LandContour +
-              Utilities +
-              LotConfig +
-              LandSlope +
-              Neighborhood +
-              Condition1 +
-              Condition2 +
-              BldgType +
-              HouseStyle +
-              OverallQual * # A discussion post recommended using the GrLivArea multiplied by the OverallQual
+                MSZoning +
+                LotFrontage +
+                LotArea +
+                Street +
+                Alley +
+                LotShape +
+                LandContour +
+                Utilities +
+                LotConfig +
+                LandSlope +
+                Neighborhood +
+                Condition1 +
+                Condition2 +
+                BldgType +
+                HouseStyle +
+                OverallQual * # A discussion post recommended using the GrLivArea multiplied by the OverallQual
                 GrLivArea +
-              OverallCond +
-              YearBuilt +
-              YearRemodAdd +
-              RoofStyle +
-              RoofMatl +
-              Exterior1st +
-              Exterior2nd +
-              MasVnrType +
-              MasVnrArea +
-              ExterQual +
-              ExterCond +
-              Foundation +
-              BsmtQual +
-              BsmtCond +
-              BsmtExposure +
-              BsmtFinType1 +
-              BsmtFinSF1 + 
-              BsmtFinType2 +
-              BsmtFinSF2 +
-              BsmtUnfSF + 
-              TotalBsmtSF +
-              Heating +
-              HeatingQC +
-              CentralAir +
-              Electrical +
-              # X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
-              X2ndFlrSF +
-              LowQualFinSF +
-              BsmtFullBath +
-              BsmtHalfBath +
-              FullBath +
-              HalfBath +
-              BedroomAbvGr +
-              KitchenAbvGr +
-              KitchenQual +
-              # TotRmsAbvGrd +  # Highly correlated to 'GrLivArea'
-              Functional +
-              Fireplaces +
-              FireplaceQu +
-              GarageType +
-              GarageYrBlt +
-              GarageFinish +
-              GarageCars +
-              GarageCond +
-              GarageQual +
-              # GarageArea +  # Highly correlated to 'GarageCars'
-              PavedDrive +
-              WoodDeckSF +
-              OpenPorchSF +
-              EnclosedPorch +
-              X3SsnPorch +
-              ScreenPorch +
-              PoolArea +
-              PoolQC +
-              Fence +
-              MiscFeature +
-              MiscVal +
-              MoSold +
-              YrSold +
-              SaleType +
-              SaleCondition, 
+                OverallCond +
+                YearBuilt +
+                YearRemodAdd +
+                RoofStyle +
+                RoofMatl +
+                Exterior1st +
+                Exterior2nd +
+                MasVnrType +
+                MasVnrArea +
+                ExterQual +
+                ExterCond +
+                Foundation +
+                BsmtQual +
+                BsmtCond +
+                BsmtExposure +
+                BsmtFinType1 +
+                BsmtFinSF1 + 
+                BsmtFinType2 +
+                BsmtFinSF2 +
+                BsmtUnfSF + 
+                TotalBsmtSF +
+                Heating +
+                HeatingQC +
+                CentralAir +
+                Electrical +
+                # X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
+                X2ndFlrSF +
+                LowQualFinSF +
+                BsmtFullBath +
+                BsmtHalfBath +
+                FullBath +
+                HalfBath +
+                BedroomAbvGr +
+                KitchenAbvGr +
+                KitchenQual +
+                # TotRmsAbvGrd +  # Highly correlated to 'GrLivArea'
+                Functional +
+                Fireplaces +
+                FireplaceQu +
+                GarageType +
+                GarageYrBlt +
+                GarageFinish +
+                GarageCars +
+                GarageCond +
+                GarageQual +
+                # GarageArea +  # Highly correlated to 'GarageCars'
+                PavedDrive +
+                WoodDeckSF +
+                OpenPorchSF +
+                EnclosedPorch +
+                X3SsnPorch +
+                ScreenPorch +
+                PoolArea +
+                PoolQC +
+                Fence +
+                MiscFeature +
+                MiscVal +
+                MoSold +
+                YrSold +
+                SaleType +
+                SaleCondition, 
               data = train_data,
               preProcess = c("center", "scale"),
               method = "glmnet")
@@ -335,21 +335,35 @@ cor(train_data$GarageCars, train_data$SalePrice)
 
 # Attempting a Random Forest Model
 set.seed(123)
-inTrain <- createDataPartition(train_data[,"SalePrice"],p=0.8, list=FALSE)
-rf.train <- train_data[train,]
-rf.test <- train_data[-train,]
-
-ctrl <- trainControl(method = "cv", number = 10)
+inTrain <- createDataPartition(train_data$SalePrice, p = 0.8, list = FALSE)
+rf.train <- train_data[inTrain,]
+rf.test <- train_data[-inTrain,]
 
 set.seed(123)
-c_rf <- randomForest(SalePrice ~ OverallQual + GrLivArea + KitchenQual + ExterQual + Neighborhood,
-                     data = train_data,
-                     mtry = 2,
-                     importance = TRUE,
-                     na.action = na.omit)
+c_rf <- train(SalePrice ~ OverallQual * GrLivArea +
+                OverallCond +
+                YrSold +
+                SaleType +
+                SaleCondition,
+              data = train_data,
+              method = "rf",
+              importance = TRUE,
+              trControl = trainControl(method = "cv", number = 5))
 
 print(c_rf)
-plot(c_rf)
+
+rf_model <- randomForest(SalePrice ~ OverallQual * GrLivArea +
+                      OverallCond +
+                      YrSold +
+                      SaleType +
+                      SaleCondition,
+                         data = train_data,
+                         mtry = 2,
+                         importance = TRUE,
+                         na.action = na.omit)
+
+print(rf_model)
+plot(rf_model)
 (rf_pred <- predict(c_rf, data.test))
 # (confusionMatrix(table(rf.test[,"SalePrice"],pred)))
 
@@ -414,6 +428,9 @@ write.csv(submission_data, "submission_file.csv", row.names=FALSE)
 #   alpha       lambda      RMSE  Rsquared        MAE      RMSESD RsquaredSD       MAESD
 #3  0.10 0.0583203499 0.1402955 0.8790267 0.08679432 0.012036779 0.02125528 0.003616432
 # Kaggle Result := Log RSME 0.14007
+
+#All predictors minus highly correlated predictors (X1stFlrSF, TotRmsAbvGrd, and GarageArea), and multiplying OverallQual * by GrLivArea
+# Kaggle Result: = Log RMSE 0.13953
 
 #Rubric score	Kaggle score (log RMSE)
 # 10  <.12
