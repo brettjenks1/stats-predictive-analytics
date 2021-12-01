@@ -439,3 +439,4 @@ write.csv(submission_data, "submission_file.csv", row.names=FALSE)
 # 7	  <.15 <- Current Score
 # 6	  <.16 
 # 5	  <.17
+#this is a test for nick github
