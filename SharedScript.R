@@ -449,7 +449,7 @@ write.csv(submission_data, "submission_file.csv", row.names=FALSE)
 #Rubric score	Kaggle score (log RMSE)
 # 10  <.12
 # 9	  <.13
-# 8	  <.14 <- Current score
-# 7	  <.15 
+# 8	  <.14 
+# 7	  <.15 <- Current Score
 # 6	  <.16 
 # 5	  <.17
