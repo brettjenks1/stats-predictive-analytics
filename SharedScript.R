@@ -44,13 +44,15 @@ cleaner <- function(dirty_data) {
       MSZoning = MSZoning %>% replace_na("NoZone"), # Train data: No NAs; Test data: HAS NAs
       MSZoning = factor(MSZoning, levels = c("A", "C (all)", "FV", "I", "RH", "RL", "RP", "RM", "NoZone")),
       
-      #I think this should be 0 is there is an NA Kaggle score went from 0.14012 to 0.14007
       LotFrontage = LotFrontage %>% replace_na(0), # Train data: HAS NAs; Test data: HAS NAs
+      LotFrontage = log(LotFrontage),
       
-      #    LotArea = factor(), # Doesn't need any mutations
+      # Logging LotArea in the cleaner function rather than the read csv function
+      LotArea = log(LotArea),
+      
       Street = factor(Street),
       Alley = Alley %>% replace_na("NoAcc"), # Replace NAs with NoAcc # HAS NAs
-      Alley = factor(Alley), 
+      Alley = factor(Alley),
       LotShape = factor(LotShape),
       LandContour = factor(LandContour),
       Utilities = Utilities %>% replace_na("Unknown"),
@@ -65,10 +67,10 @@ cleaner <- function(dirty_data) {
       OverallQual = factor(OverallQual),
       OverallCond = factor(OverallCond),
       
-      #These should not be factors, it's a year and they're be way too many coefficients
+      #These should not be factors, it's a year and they're be way too many coefficients. HIGHLY SKEWED
       # YearBuilt = factor(YearBuilt, levels = factor(YearBuilt) %>% levels),
       # YearRemodAdd = factor(YearRemodAdd, levels = factor(YearRemodAdd) %>% levels),
-      
+
       RoofStyle = factor(RoofStyle),
       RoofMatl = factor(RoofMatl),
       
@@ -81,6 +83,9 @@ cleaner <- function(dirty_data) {
       MasVnrType = MasVnrType %>% replace_na("None"), # Train data: HAS NAs; Test data: HAS NAs
       MasVnrType = factor(MasVnrType),
       MasVnrArea = MasVnrArea %>% replace_na(0), # Train data: HAS NAs; Test data: No NAs # NAs should be replaced with 0 since we don't know what NA means in this context
+
+      # MasVnrArea - log(MasVnrArea), # No benefit in logging it
+      
       ExterQual = factor(ExterQual, levels = c("Po", "Fa", "TA", "Gd", "Ex")),
       ExterCond = factor(ExterCond, levels = c("Po", "Fa", "TA", "Gd", "Ex")),
       Foundation = factor(Foundation),
@@ -92,22 +97,39 @@ cleaner <- function(dirty_data) {
       BsmtExposure = factor(BsmtExposure, levels = c("NoBsmt", "No", "Mn", "Av", "Gd")), # HAS NAs
       BsmtFinType1 = BsmtFinType1 %>% replace_na("NoBsmt"), # HAS NAs
       BsmtFinType1 = factor(BsmtFinType1, levels = c("NoBsmt", "Unf", "LwQ", "Rec", "BLQ", "ALQ", "GLQ")), # HAS NAs
-      BsmtFinSF1 = BsmtFinSF1 %>% replace_na(0), # Train data: No NAs, Test data: HAS 1 NA
       BsmtFinType2 = BsmtFinType2 %>% replace_na("NoBsmt"), # HAS NAs
       BsmtFinType2 = factor(BsmtFinType2, levels = c("NoBsmt", "Unf", "LwQ", "Rec", "BLQ", "ALQ", "GLQ")),
+      
+      # Replacing NA with 0
+      BsmtFinSF1 = BsmtFinSF1 %>% replace_na(0), # Train data: No NAs, Test data: HAS 1 NA
       BsmtFinSF2 = BsmtFinSF2 %>% replace_na(0), # Test data: HAS 1 NA
       BsmtUnfSF = BsmtUnfSF %>% replace_na(0), # Test data: HAS 1 NA
       TotalBsmtSF = TotalBsmtSF %>% replace_na(0), # Test data: HAS 1 NA
+
+      # Logging
+      BsmtFinSF1 = log(BsmtFinSF1), # Highly skewed right with most values at 0
+      BsmtFinSF2 = log(BsmtFinSF2), # Most values at 0
+      #BsmtUnfSF = log(BsmtUnfSF), # Negative beneift when logged
+      TotalBsmtSF = log(TotalBsmtSF), 
+      
       Heating = factor(Heating),
       HeatingQC = factor(HeatingQC, levels = c("Po", "Fa", "TA", "Gd", "Ex")),
       CentralAir = factor(CentralAir),
       Electrical = Electrical %>% replace_na("Mix"), # Train data: HAS NA; Test data: No NAs
       Electrical = factor(Electrical), # HAS NA
-      #   1stFlrSF = factor(), # Probably doesn't need any mutations
-      #   2ndFlrSF = factor(), # Probably doesn't need any mutations
-      #   LowQualFinSF = factor(), # Probably doesn't need any mutations
-      #    GrLivArea   = factor(), # Probably doesn't need any mutations
+
+      # Logging X1stFlrSF in cleaner function rather than read csv function
+      # X1stFlrSF = log(X1stFlrSF), # No benefit in logging
+      X2ndFlrSF = log(X2ndFlrSF),
+      LowQualFinSF = log(LowQualFinSF), # Probably doesn't logged
       
+      # Logging in cleaner function rather than read csv function
+      GrLivArea = log(GrLivArea),
+
+### Test
+      TotalSF = TotalBsmtSF + GrLivArea,
+### Test
+
       BsmtFullBath  = BsmtFullBath %>% replace_na(0), # Test data: HAS 2 NAs
       BsmtHalfBath  = BsmtHalfBath %>% replace_na(0), # Test data: HAS 2 NAs
       
@@ -134,13 +156,19 @@ cleaner <- function(dirty_data) {
       GarageType = factor(GarageType), # HAS NAs
       
       GarageYrBlt = GarageYrBlt %>% replace_na(1980), # NAs should use the median [1980] to not mess with the data # HAS NAs
-      
+         
+      # Logging
+      GarageYrBlt = log(GarageYrBlt),
+
       GarageFinish = GarageFinish  %>% replace_na("NoGrge"), # HAS NAs
       GarageFinish = factor(GarageFinish), # NAs should specify no garage # HAS NAs
       
       GarageCars = GarageCars %>% replace_na(0), # Test data: HAS 1 NA
       
       GarageArea = GarageArea %>% replace_na(0),
+      
+      # Logging
+      #   GarageArea = log(GarageArea),
       
       GarageQual = GarageQual %>% replace_na("NoGrge"), # NAs should specify no garage # HAS NAs
       GarageQual = factor(GarageQual, levels = c("NoGrge", "Po", "Fa", "TA", "Gd", "Ex")), # HAS NAs
@@ -149,13 +177,14 @@ cleaner <- function(dirty_data) {
       GarageCond = factor(GarageCond, levels = c("NoGrge", "Po", "Fa", "TA", "Gd", "Ex")), # HAS NAs
       
       PavedDrive = factor(PavedDrive),
-      
-      #    WoodDeckSF = factor(), # Probably doesn't need any mutations
-      #    OpenPorchSF = factor(), # Probably doesn't need any mutations
-      #    EnclosedPorch = factor(), # Probably doesn't need any mutations
-      #    3SsnPorch = factor(), # Probably doesn't need any mutations
-      #    ScreenPorch = factor(), # Probably doesn't need any mutations
-      #    PoolArea = factor(), # Probably doesn't need any mutations
+
+      # Logging
+      #   WoodDeckSF = log(WoodDeckSF), # No beneift in logging
+      OpenPorchSF = log(OpenPorchSF),
+      EnclosedPorch = log(EnclosedPorch),
+      X3SsnPorch = log(X3SsnPorch),
+      #   ScreenPorch = log(ScreenPorch), # No benefit in logging
+      #   PoolArea = log(PoolArea), # No benfit in logging
       
       PoolQC = PoolQC %>% replace_na("NoPool"), #NAs should specify no pool # HAS NAs
       PoolQC = factor(PoolQC, levels = c("NoPool", "Fa", "TA", "Gd", "Ex")), # HAS NAs
@@ -180,26 +209,12 @@ cleaner <- function(dirty_data) {
 
 train_data <- read.csv("train.csv") %>%
   cleaner() %>%
-  select(-Id) %>%
-  mutate(SalePrice = log(SalePrice),
-         LotArea = log(LotArea),
-         X1stFlrSF = log(X1stFlrSF),
-         GrLivArea = log(GrLivArea))
+  mutate(SalePrice = log(SalePrice))
 
 ###### There are some outliers that we might consider removing from our model. Anything more than 4,000 SF GrLivArea or 6,000 SF TotalSF
-train_data_2 <- read.csv("train.csv") %>%
-  cleaner() %>%
-  mutate(TotalSF = TotalBsmtSF + GrLivArea)
-
-train_data_2 %>%
-  ggplot(aes(GrLivArea, SalePrice)) +
-  geom_point()
 
 test_data <- read.csv("test.csv") %>%
-  cleaner() %>%
-  mutate(LotArea = log(LotArea),
-         X1stFlrSF = log(X1stFlrSF),
-         GrLivArea = log(GrLivArea))
+  cleaner()
 
 set.seed(123)
 c_lm <- train(SalePrice ~ MSSubClass +
@@ -220,6 +235,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 HouseStyle +
                 OverallQual * # A discussion post recommended using the GrLivArea multiplied by the OverallQual
                 GrLivArea +
+                TotalSF +
                 OverallCond +
                 YearBuilt +
                 YearRemodAdd +
@@ -245,7 +261,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 HeatingQC +
                 CentralAir +
                 Electrical +
-                # X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
+                #   X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
                 X2ndFlrSF +
                 LowQualFinSF +
                 BsmtFullBath +
@@ -255,7 +271,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 BedroomAbvGr +
                 KitchenAbvGr +
                 KitchenQual +
-                # TotRmsAbvGrd +  # Highly correlated to 'GrLivArea'
+                #   TotRmsAbvGrd +  # Highly correlated to 'GrLivArea'
                 Functional +
                 Fireplaces +
                 FireplaceQu +
@@ -265,7 +281,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 GarageCars +
                 GarageCond +
                 GarageQual +
-                # GarageArea +  # Highly correlated to 'GarageCars'
+                #   GarageArea +  # Highly correlated to 'GarageCars'
                 PavedDrive +
                 WoodDeckSF +
                 OpenPorchSF +
@@ -284,6 +300,9 @@ c_lm <- train(SalePrice ~ MSSubClass +
               data = train_data,
               preProcess = c("center", "scale"),
               method = "glmnet")
+
+#Out of sample performance
+c_lm$results
 
 
 #In-sample performance
