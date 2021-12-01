@@ -167,14 +167,17 @@ cleaner <- function(dirty_data) {
       MiscFeature = factor(MiscFeature), # HAS NAs
       
       #    MiscVal = factor(), # Probably doesn't need any mutations
+      
+      YrMoSold = factor(((YrSold - min(YrSold))*12 + MoSold)),
       MoSold = factor(MoSold),
-      #    YrSold = factor(), # Probably doesn't need any mutations
+      #YrSold = factor(), # Probably doesn't need any mutations
       
       SaleType = factor(SaleType),
       SaleType = SaleType %>% replace_na(calc_mode(levels(SaleType))), # Test data has 1 NA
       
       SaleCondition = factor(SaleCondition)
-    )
+    ) 
+  
   return(clean_data)
 }
 
@@ -209,7 +212,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 Condition2 +
                 BldgType +
                 HouseStyle +
-                OverallQual + # A discussion post recommended using the GrLivArea multiplied by the OverallQual
+                OverallQual * # A discussion post recommended using the GrLivArea multiplied by the OverallQual
                 GrLivArea +
                 OverallCond +
                 YearBuilt +
@@ -236,7 +239,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 HeatingQC +
                 CentralAir +
                 Electrical +
-                X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
+                #X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
                 X2ndFlrSF +
                 LowQualFinSF +
                 BsmtFullBath +
@@ -246,7 +249,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 BedroomAbvGr +
                 KitchenAbvGr +
                 KitchenQual +
-                TotRmsAbvGrd +  # Highly correlated to 'GrLivArea'
+                #TotRmsAbvGrd +  # Highly correlated to 'GrLivArea'
                 Functional +
                 Fireplaces +
                 FireplaceQu +
@@ -256,7 +259,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 GarageCars +
                 GarageCond +
                 GarageQual +
-                GarageArea +  # Highly correlated to 'GarageCars'
+                #GarageArea +  # Highly correlated to 'GarageCars'
                 PavedDrive +
                 WoodDeckSF +
                 OpenPorchSF +
@@ -268,8 +271,9 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 Fence +
                 MiscFeature +
                 MiscVal +
-                MoSold +
-                YrSold +
+                MoSold + #Combined with YrSold into YrMoSold
+                YrSold + #Combined with MoSold  into YrMoSold
+                #YrMoSold +
                 SaleType +
                 SaleCondition, 
               data = train_data,
@@ -294,99 +298,23 @@ c_lm_Kept_Coef <- c_lm_coeffs[c_lm_coeffs[,1]!=0,0]
 c_lm_Kept_Coef
 nrow(c_lm_Kept_Coef)
 
-###############################################################
-
-# Identify Highly correlated predictors
-
-# Numeric Correlation Coefficients
-
-t <- train_data %>%
-  select(where(is.numeric))
-
-v <- t %>%
-  select(-SalePrice)
-
-o <- cor(t$SalePrice, v)
-
-
-# Highly correlated to each other
-correlMatrix <- cor(v[,2:31])
-(highCorrel <- findCorrelation(correlMatrix, cutoff=0.75, names = TRUE, verbose = TRUE))
-print(correlMatrix[,highCorrel])
-
-cor(train_data$GrLivArea, train_data$TotRmsAbvGrd)
+#Plotting YrMoSold
 train_data %>%
-  ggplot(aes(GrLivArea, TotRmsAbvGrd)) +
+  ggplot(aes(x = YrMoSold, y = exp(SalePrice))) +
+  geom_smooth(method=lm) + 
   geom_point()
 
-cor(train_data$GrLivArea, train_data$SalePrice)
-cor(train_data$TotRmsAbvGrd, train_data$SalePrice) # Remove TotRmsAbvGrd from model?
-
-cor(train_data$X1stFlrSF, train_data$TotalBsmtSF)
 train_data %>%
-  ggplot(aes(X1stFlrSF, TotalBsmtSF)) +
-  geom_point()
+  ggplot(aes(group = YrMoSold, y= SalePrice)) +
+  geom_boxplot()
 
-cor(train_data$X1stFlrSF, train_data$SalePrice) # Remove X1stFlrSF from model?
-cor(train_data$TotalBsmtSF, train_data$SalePrice)
-
-
-cor(train_data$GarageArea, train_data$GarageCars)
 train_data %>%
-  ggplot(aes(GarageArea, GarageCars)) +
+  ggplot(aes(x = MoSold, y = exp(SalePrice))) +
+  geom_smooth(method=lm) + 
   geom_point()
-
-cor(train_data$GarageArea, train_data$SalePrice) # Remove Garage Area from model?
-cor(train_data$GarageCars, train_data$SalePrice)
 
 
 ###############################################################
-
-# Attempting a Random Forest Model
-set.seed(123)
-inTrain <- createDataPartition(train_data$SalePrice, p = 0.8, list = FALSE)
-rf.train <- train_data[inTrain,]
-rf.test <- train_data[-inTrain,]
-
-set.seed(123)
-c_rf <- train(SalePrice ~ OverallQual * GrLivArea +
-                OverallCond +
-                YrSold +
-                SaleType +
-                SaleCondition,
-              data = train_data,
-              method = "rf",
-              importance = TRUE,
-              trControl = trainControl(method = "cv", number = 5))
-
-print(c_rf)
-
-rf_model <- randomForest(SalePrice ~ OverallQual * GrLivArea +
-                      OverallCond +
-                      YrSold +
-                      SaleType +
-                      SaleCondition,
-                         data = train_data,
-                         mtry = 2,
-                         importance = TRUE,
-                         na.action = na.omit)
-
-print(rf_model)
-plot(rf_model)
-(rf_pred <- predict(c_rf, data.test))
-# (confusionMatrix(table(rf.test[,"SalePrice"],pred)))
-
-###############################################################
-
-
-
-# We need to do all the manipulations to the data we are going to be testing as we do to the train data. Once that dataframe is defined, we can apply the predict function with the linear model of our choosing.
-
-
-# predict_prices <- predict(m_lm, test_data)
-# submission_data <- data.frame('Id' = test_data$Id, 'SalePrice' = predict_prices)
-
-# submission_data <- add_predictions(test_data, m_lm, var = "SalePrice")
 
 
 submission_data <- test_data %>%
