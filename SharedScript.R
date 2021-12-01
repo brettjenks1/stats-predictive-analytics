@@ -48,6 +48,7 @@ cleaner <- function(dirty_data) {
       LotFrontage = LotFrontage %>% replace_na(0), # Train data: HAS NAs; Test data: HAS NAs
       
       #    LotArea = factor(), # Doesn't need any mutations
+      LotArea = LotArea %>% replace_na(0), # any numerics that are missing data should be filled with 0
       Street = factor(Street),
       Alley = Alley %>% replace_na("NoAcc"), # Replace NAs with NoAcc # HAS NAs
       Alley = factor(Alley), 
@@ -63,11 +64,16 @@ cleaner <- function(dirty_data) {
       BldgType = factor(BldgType),
       HouseStyle = factor(HouseStyle),
       OverallQual = factor(OverallQual),
+      OverallQual = OverallQual %>% replace_na(0), # any numerics that are missing data should be filled with 0
       OverallCond = factor(OverallCond),
+      OverallCond = OverallCond %>% replace_na(0), # any numerics that are missing data should be filled with 0
       
       #These should not be factors, it's a year and they're be way too many coefficients
       # YearBuilt = factor(YearBuilt, levels = factor(YearBuilt) %>% levels),
       # YearRemodAdd = factor(YearRemodAdd, levels = factor(YearRemodAdd) %>% levels),
+      
+      YearBuilt = YearBuilt %>% replace_na(0), # any numerics that are missing data should be filled with 0
+      YearRemodAdd = YearRemodAdd %>% replace_na(0), # any numerics that are missing data should be filled with 0
       
       RoofStyle = factor(RoofStyle),
       RoofMatl = factor(RoofMatl),
@@ -133,7 +139,8 @@ cleaner <- function(dirty_data) {
       GarageType = GarageType %>% replace_na("NoGrge"), #NAs should specify no garage # HAS NAs
       GarageType = factor(GarageType), # HAS NAs
       
-      GarageYrBlt = GarageYrBlt %>% replace_na(1980), # NAs should use the median [1980] to not mess with the data # HAS NAs
+      #GarageYrBlt = GarageYrBlt %>% replace_na(1980), # NAs should use the median [1980] to not mess with the data # HAS NAs
+      GarageYrBlt = GarageYrBlt %>% replace_na(0), # Changed NAs to 0 because if they don't have any date, it probably means they don't have a garage.
       
       GarageFinish = GarageFinish  %>% replace_na("NoGrge"), # HAS NAs
       GarageFinish = factor(GarageFinish), # NAs should specify no garage # HAS NAs
@@ -173,7 +180,20 @@ cleaner <- function(dirty_data) {
       SaleType = factor(SaleType),
       SaleType = SaleType %>% replace_na(calc_mode(levels(SaleType))), # Test data has 1 NA
       
-      SaleCondition = factor(SaleCondition)
+      SaleCondition = factor(SaleCondition),
+      
+      # adding some new columns as part of the feature engineering
+      YrBltAndRemod = YearBuilt + YearRemodAdd,
+      TotalSF = TotalBsmtSF+X1stFlrSF+X2ndFlrSF,
+      Total_sqr_footage = BsmtFinSF1+BsmtFinSF2+X1stFlrSF+X2ndFlrSF,
+      Total_Bathrooms = FullBath+(0.5*HalfBath)+BsmtFullBath+(0.5*BsmtHalfBath),
+      Total_porch_sf = OpenPorchSF+X3SsnPorch+EnclosedPorch+ScreenPorch+WoodDeckSF,
+      haspool = replace(PoolArea, PoolArea>0, 1),
+      has2ndfloor = replace(X2ndFlrSF, X2ndFlrSF>0, 1),
+      hasgarage = replace(GarageArea, GarageArea>0, 1),
+      hasbsmt = replace(TotalBsmtSF, TotalBsmtSF>0, 1),
+      hasfireplace = replace(Fireplaces, Fireplaces>0, 1)
+      
     )
   return(clean_data)
 }
@@ -186,6 +206,12 @@ train_data <- read.csv("train.csv") %>%
          X1stFlrSF = log(X1stFlrSF),
          GrLivArea = log(GrLivArea))
 
+#removing outliers from the training data (feature engineering shown in top 50) 
+#boxplot(train_data$GrLivArea)$out
+#outliers <- boxplot(train_data$GrLivArea)$out
+#train_data <- train_data[-which(train_data$GrLivArea %in% outliers),]
+##if we remove these outliers our most recent score of 0.13711 goes to 0.13829 :(
+
 test_data <- read.csv("test.csv") %>%
   cleaner() %>%
   mutate(LotArea = log(LotArea),
@@ -197,11 +223,11 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 MSZoning +
                 LotFrontage +
                 LotArea +
-                Street +
+                #Street + #removed as show in the top 50 engineer features step, The claim is that they aren't useful and it can be determined by doing proper exploratory data analysis
                 Alley +
                 LotShape +
                 LandContour +
-                Utilities +
+                #Utilities + #removed as show in the top 50 engineer features step, The claim is that they aren't useful and it can be determined by doing proper exploratory data analysis
                 LotConfig +
                 LandSlope +
                 Neighborhood +
@@ -264,14 +290,24 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 X3SsnPorch +
                 ScreenPorch +
                 PoolArea +
-                PoolQC +
+                #PoolQC + #removed as show in the top 50 engineer features step, The claim is that they aren't useful and it can be determined by doing proper exploratory data analysis
                 Fence +
                 MiscFeature +
                 MiscVal +
                 MoSold +
                 YrSold +
                 SaleType +
-                SaleCondition, 
+                SaleCondition +
+                YrBltAndRemod + # Created these new columns because of feature engineering
+                TotalSF +
+                Total_sqr_footage +
+                Total_Bathrooms +
+                Total_porch_sf +
+                haspool +
+                has2ndfloor +
+                hasgarage +
+                hasbsmt +
+                hasfireplace,
               data = train_data,
               preProcess = c("center", "scale"),
               method = "glmnet")
@@ -334,37 +370,37 @@ cor(train_data$GarageCars, train_data$SalePrice)
 ###############################################################
 
 # Attempting a Random Forest Model
-set.seed(123)
-inTrain <- createDataPartition(train_data$SalePrice, p = 0.8, list = FALSE)
-rf.train <- train_data[inTrain,]
-rf.test <- train_data[-inTrain,]
+#set.seed(123)
+#inTrain <- createDataPartition(train_data$SalePrice, p = 0.8, list = FALSE)
+#rf.train <- train_data[inTrain,]
+#rf.test <- train_data[-inTrain,]
 
-set.seed(123)
-c_rf <- train(SalePrice ~ OverallQual * GrLivArea +
-                OverallCond +
-                YrSold +
-                SaleType +
-                SaleCondition,
-              data = train_data,
-              method = "rf",
-              importance = TRUE,
-              trControl = trainControl(method = "cv", number = 5))
+#set.seed(123)
+#c_rf <- train(SalePrice ~ OverallQual * GrLivArea +
+#                OverallCond +
+#                YrSold +
+#                SaleType +
+#                SaleCondition,
+#              data = train_data,
+#              method = "rf",
+#              importance = TRUE,
+#              trControl = trainControl(method = "cv", number = 5))
 
-print(c_rf)
+#print(c_rf)
 
-rf_model <- randomForest(SalePrice ~ OverallQual * GrLivArea +
-                      OverallCond +
-                      YrSold +
-                      SaleType +
-                      SaleCondition,
-                         data = train_data,
-                         mtry = 2,
-                         importance = TRUE,
-                         na.action = na.omit)
-
-print(rf_model)
-plot(rf_model)
-(rf_pred <- predict(c_rf, data.test))
+#rf_model <- randomForest(SalePrice ~ OverallQual * GrLivArea +
+#                      OverallCond +
+#                      YrSold +
+#                      SaleType +
+#                      SaleCondition,
+#                         data = train_data,
+#                         mtry = 2,
+#                         importance = TRUE,
+#                         na.action = na.omit)
+#
+#print(rf_model)
+#plot(rf_model)
+#(rf_pred <- predict(c_rf, data.test))
 # (confusionMatrix(table(rf.test[,"SalePrice"],pred)))
 
 ###############################################################
@@ -378,7 +414,6 @@ plot(rf_model)
 # submission_data <- data.frame('Id' = test_data$Id, 'SalePrice' = predict_prices)
 
 # submission_data <- add_predictions(test_data, m_lm, var = "SalePrice")
-
 
 submission_data <- test_data %>%
   select(Id) %>%
@@ -432,10 +467,17 @@ write.csv(submission_data, "submission_file.csv", row.names=FALSE)
 #All predictors minus highly correlated predictors (X1stFlrSF, TotRmsAbvGrd, and GarageArea), and multiplying OverallQual * by GrLivArea
 # Kaggle Result: = Log RMSE 0.13953
 
+#All predictors minus useless predictors(first 3 mentioned in top 50 feature engineering) and highly correlated predictors  (Utilities, Street, PoolQC, X1stFlrSF, TotRmsAbvGrd, and GarageArea), and multiplying OverallQual * by GrLivArea
+# Kaggle Result: = Log RMSE 0.13711 
+
+# with newly added (total)predictors the score went from 0.13711 to 13741
+# tried adding back in utilities, street and poolQC and the score jumped to 0.13986
+# with (total and has predictors) the score went from 0.13711 to 0.13664
+
 #Rubric score	Kaggle score (log RMSE)
 # 10  <.12
 # 9	  <.13
-# 8	  <.14 
-# 7	  <.15 <- Current Score
+# 8	  <.14 <- Current Score
+# 7	  <.15 
 # 6	  <.16 
 # 5	  <.17
