@@ -186,6 +186,15 @@ train_data <- read.csv("train.csv") %>%
          X1stFlrSF = log(X1stFlrSF),
          GrLivArea = log(GrLivArea))
 
+###### There are some outliers that we might consider removing from our model. Anything more than 4,000 SF GrLivArea or 6,000 SF TotalSF
+train_data_2 <- read.csv("train.csv") %>%
+  cleaner() %>%
+  mutate(TotalSF = TotalBsmtSF + GrLivArea)
+
+train_data_2 %>%
+  ggplot(aes(GrLivArea, SalePrice)) +
+  geom_point()
+
 test_data <- read.csv("test.csv") %>%
   cleaner() %>%
   mutate(LotArea = log(LotArea),
@@ -311,6 +320,11 @@ train_data %>%
   geom_point()
 
 cor(train_data$GrLivArea, train_data$SalePrice)
+
+train_data %>%
+  ggplot(aes(GrLivArea, SalePrice)) +
+  geom_point()
+
 cor(train_data$TotRmsAbvGrd, train_data$SalePrice) # Remove TotRmsAbvGrd from model?
 
 cor(train_data$X1stFlrSF, train_data$TotalBsmtSF)
