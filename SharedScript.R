@@ -133,7 +133,7 @@ cleaner <- function(dirty_data) {
       GarageType = GarageType %>% replace_na("NoGrge"), #NAs should specify no garage # HAS NAs
       GarageType = factor(GarageType), # HAS NAs
       
-      GarageYrBlt = GarageYrBlt %>% replace_na(1980), # NAs should use the median [1980] to not mess with the data # HAS NAs
+      GarageYrBlt = GarageYrBlt %>% replace_na(0), # NAs should use the median [1980] to not mess with the data # HAS NAs
       
       GarageFinish = GarageFinish  %>% replace_na("NoGrge"), # HAS NAs
       GarageFinish = factor(GarageFinish), # NAs should specify no garage # HAS NAs
@@ -209,7 +209,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 Condition2 +
                 BldgType +
                 HouseStyle +
-                OverallQual * # A discussion post recommended using the GrLivArea multiplied by the OverallQual
+                OverallQual + # A discussion post recommended using the GrLivArea multiplied by the OverallQual
                 GrLivArea +
                 OverallCond +
                 YearBuilt +
@@ -236,7 +236,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 HeatingQC +
                 CentralAir +
                 Electrical +
-                # X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
+                X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
                 X2ndFlrSF +
                 LowQualFinSF +
                 BsmtFullBath +
@@ -246,7 +246,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 BedroomAbvGr +
                 KitchenAbvGr +
                 KitchenQual +
-                # TotRmsAbvGrd +  # Highly correlated to 'GrLivArea'
+                TotRmsAbvGrd +  # Highly correlated to 'GrLivArea'
                 Functional +
                 Fireplaces +
                 FireplaceQu +
@@ -256,7 +256,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 GarageCars +
                 GarageCond +
                 GarageQual +
-                # GarageArea +  # Highly correlated to 'GarageCars'
+                GarageArea +  # Highly correlated to 'GarageCars'
                 PavedDrive +
                 WoodDeckSF +
                 OpenPorchSF +
@@ -284,6 +284,15 @@ rmsle(train_data$SalePrice, exp(fitted(c_lm)))
 
 #Out-of-sample performance
 c_lm$results
+
+#90% Ridge Regression and 10# Lasso Regression Coefficients Removed
+c_lm_coeffs <- coef(c_lm$finalModel, c_lm$bestTune$lambda)
+c_lm_Rmvd_Coef <- c_lm_coeffs[c_lm_coeffs[,1]==0,0]
+c_lm_Rmvd_Coef
+nrow(c_lm_Rmvd_Coef)
+c_lm_Kept_Coef <- c_lm_coeffs[c_lm_coeffs[,1]!=0,0]
+c_lm_Kept_Coef
+nrow(c_lm_Kept_Coef)
 
 ###############################################################
 
@@ -435,8 +444,7 @@ write.csv(submission_data, "submission_file.csv", row.names=FALSE)
 #Rubric score	Kaggle score (log RMSE)
 # 10  <.12
 # 9	  <.13
-# 8	  <.14 
-# 7	  <.15 <- Current Score
+# 8	  <.14 <- Current Score
+# 7	  <.15 
 # 6	  <.16 
 # 5	  <.17
-#this is a test for nick github
