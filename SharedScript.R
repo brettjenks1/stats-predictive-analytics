@@ -67,9 +67,9 @@ cleaner <- function(dirty_data) {
       OverallQual = factor(OverallQual),
       OverallCond = factor(OverallCond),
       
-      #These should not be factors, it's a year and they're be way too many coefficients. HIGHLY SKEWED
-      # YearBuilt = factor(YearBuilt, levels = factor(YearBuilt) %>% levels),
-      # YearRemodAdd = factor(YearRemodAdd, levels = factor(YearRemodAdd) %>% levels),
+      #These should not be factors
+      #   YearBuilt = factor(YearBuilt, levels = factor(YearBuilt) %>% levels),
+      #   YearRemodAdd = factor(YearRemodAdd, levels = factor(YearRemodAdd) %>% levels),
 
       RoofStyle = factor(RoofStyle),
       RoofMatl = factor(RoofMatl),
@@ -106,6 +106,9 @@ cleaner <- function(dirty_data) {
       BsmtUnfSF = BsmtUnfSF %>% replace_na(0), # Test data: HAS 1 NA
       TotalBsmtSF = TotalBsmtSF %>% replace_na(0), # Test data: HAS 1 NA
 
+      TotalSF = TotalBsmtSF + GrLivArea,
+      TotalSF = log(TotalSF),
+      
       # Logging
       BsmtFinSF1 = log(BsmtFinSF1), # Highly skewed right with most values at 0
       BsmtFinSF2 = log(BsmtFinSF2), # Most values at 0
@@ -125,10 +128,6 @@ cleaner <- function(dirty_data) {
       
       # Logging in cleaner function rather than read csv function
       GrLivArea = log(GrLivArea),
-
-### Test
-      TotalSF = TotalBsmtSF + GrLivArea,
-### Test
 
       BsmtFullBath  = BsmtFullBath %>% replace_na(0), # Test data: HAS 2 NAs
       BsmtHalfBath  = BsmtHalfBath %>% replace_na(0), # Test data: HAS 2 NAs
@@ -228,14 +227,14 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 Utilities +
                 LotConfig +
                 LandSlope +
-                Neighborhood +
                 Condition1 +
                 Condition2 +
                 BldgType +
                 HouseStyle +
-                OverallQual * # A discussion post recommended using the GrLivArea multiplied by the OverallQual
+                OverallQual * Neighborhood + # A discussion post recommended using the GrLivArea multiplied by the OverallQual
                 GrLivArea +
-                TotalSF +
+                TotalSF *
+                Neighborhood +
                 OverallCond +
                 YearBuilt +
                 YearRemodAdd +
@@ -262,7 +261,7 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 CentralAir +
                 Electrical +
                 #   X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
-                X2ndFlrSF +
+                #   X2ndFlrSF +
                 LowQualFinSF +
                 BsmtFullBath +
                 BsmtHalfBath +
