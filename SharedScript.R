@@ -178,7 +178,7 @@ cleaner <- function(dirty_data) {
   return(clean_data)
 }
 
-train_data <- read.csv("train.csv") %>%
+train_data <- read.csv("c:/users/acbar/onedrive/documents/is6489/project/house-prices-advanced-regression-techniques/train.csv") %>%
   cleaner() %>%
   select(-Id) %>%
   mutate(SalePrice = log(SalePrice),
@@ -191,6 +191,27 @@ test_data <- read.csv("test.csv") %>%
   mutate(LotArea = log(LotArea),
          X1stFlrSF = log(X1stFlrSF),
          GrLivArea = log(GrLivArea))
+
+# Feature Engineering
+
+train_data <- train_data %>% 
+  select(-Utilities, -Street, -PoolQC)
+
+head(train_data$PoolArea)
+
+train_data <- train_data %>% 
+  mutate(YrBltAndRemod = YearBuilt + YearRemodAdd,
+         TotalSF = TotalBsmtSF + X1stFlrSF + X2ndFlrSF,
+         Total_Sq_Footage = (BsmtFinSF1 + BsmtFinSF2 + X1stFlrSF + X2ndFlrSF),
+         Total_Bathrooms = (FullBath + (.5 * HalfBath) + BsmtFullBath + (.5 * BsmtHalfBath)),
+         Total_Porch_SF = (OpenPorchSF + X3SsnPorch + EnclosedPorch + ScreenPorch + WoodDeckSF),
+         HasPool = ifelse(PoolArea > 0, 1, 0),
+         Has2ndFloor = ifelse(X2ndFlrSF > 0, 1, 0),
+         HasGarage = ifelse(GarageArea > 0, 1, 0),
+         HasBsmt = ifelse(TotalBsmtSF > 0, 1, 0),
+         HasFireplace = ifelse(Fireplaces > 0, 1, 0))
+
+
 
 set.seed(123)
 c_lm <- train(SalePrice ~ MSSubClass +
