@@ -70,7 +70,7 @@ cleaner <- function(dirty_data) {
       #These should not be factors
       #   YearBuilt = factor(YearBuilt, levels = factor(YearBuilt) %>% levels),
       #   YearRemodAdd = factor(YearRemodAdd, levels = factor(YearRemodAdd) %>% levels),
-
+      
       RoofStyle = factor(RoofStyle),
       RoofMatl = factor(RoofMatl),
       
@@ -83,7 +83,7 @@ cleaner <- function(dirty_data) {
       MasVnrType = MasVnrType %>% replace_na("None"), # Train data: HAS NAs; Test data: HAS NAs
       MasVnrType = factor(MasVnrType),
       MasVnrArea = MasVnrArea %>% replace_na(0), # Train data: HAS NAs; Test data: No NAs # NAs should be replaced with 0 since we don't know what NA means in this context
-
+      
       # MasVnrArea - log(MasVnrArea), # No benefit in logging it
       
       ExterQual = factor(ExterQual, levels = c("Po", "Fa", "TA", "Gd", "Ex")),
@@ -105,7 +105,7 @@ cleaner <- function(dirty_data) {
       BsmtFinSF2 = BsmtFinSF2 %>% replace_na(0), # Test data: HAS 1 NA
       BsmtUnfSF = BsmtUnfSF %>% replace_na(0), # Test data: HAS 1 NA
       TotalBsmtSF = TotalBsmtSF %>% replace_na(0), # Test data: HAS 1 NA
-
+      
       TotalSF = TotalBsmtSF + GrLivArea,
       TotalSF = log(TotalSF),
       
@@ -120,7 +120,7 @@ cleaner <- function(dirty_data) {
       CentralAir = factor(CentralAir),
       Electrical = Electrical %>% replace_na("Mix"), # Train data: HAS NA; Test data: No NAs
       Electrical = factor(Electrical), # HAS NA
-
+      
       # Logging X1stFlrSF in cleaner function rather than read csv function
       # X1stFlrSF = log(X1stFlrSF), # No benefit in logging
       X2ndFlrSF = log(X2ndFlrSF),
@@ -128,7 +128,7 @@ cleaner <- function(dirty_data) {
       
       # Logging in cleaner function rather than read csv function
       GrLivArea = log(GrLivArea),
-
+      
       BsmtFullBath  = BsmtFullBath %>% replace_na(0), # Test data: HAS 2 NAs
       BsmtHalfBath  = BsmtHalfBath %>% replace_na(0), # Test data: HAS 2 NAs
       
@@ -155,10 +155,10 @@ cleaner <- function(dirty_data) {
       GarageType = factor(GarageType), # HAS NAs
       
       GarageYrBlt = GarageYrBlt %>% replace_na(1980), # NAs should use the median [1980] to not mess with the data # HAS NAs
-         
+      
       # Logging
       GarageYrBlt = log(GarageYrBlt),
-
+      
       GarageFinish = GarageFinish  %>% replace_na("NoGrge"), # HAS NAs
       GarageFinish = factor(GarageFinish), # NAs should specify no garage # HAS NAs
       
@@ -176,7 +176,7 @@ cleaner <- function(dirty_data) {
       GarageCond = factor(GarageCond, levels = c("NoGrge", "Po", "Fa", "TA", "Gd", "Ex")), # HAS NAs
       
       PavedDrive = factor(PavedDrive),
-
+      
       # Logging
       #   WoodDeckSF = log(WoodDeckSF), # No beneift in logging
       OpenPorchSF = log(OpenPorchSF),
@@ -385,10 +385,10 @@ c_rf <- train(SalePrice ~ OverallQual * GrLivArea +
 print(c_rf)
 
 rf_model <- randomForest(SalePrice ~ OverallQual * GrLivArea +
-                      OverallCond +
-                      YrSold +
-                      SaleType +
-                      SaleCondition,
+                           OverallCond +
+                           YrSold +
+                           SaleType +
+                           SaleCondition,
                          data = train_data,
                          mtry = 2,
                          importance = TRUE,
