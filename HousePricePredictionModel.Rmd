@@ -1,6 +1,17 @@
+---
+title: "HousePricePredictionModel"
+author: "AARON BARNES, BRETT JENKINS, NICK RUSSELL, RILIND ASLLANI"
+date: "12/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
 # This installs the packages if you don't have them, and loads them into your environment.
 # If you need more packages, add them to the packages vector.
-packages <- c("tidyverse", "faux", "DataExplorer", "randomForest", "caret", "corrplot", "modelr", "stats", "rpart.plot", "mlbench", "imputeMissings", "ggplot2", "cowplot")
+
+packages <- c("tidyverse", "faux", "DataExplorer", "randomForest", "caret", "corrplot", "modelr", "stats", "rpart.plot", "mlbench", "imputeMissings")
 
 package.check <- lapply(
   packages,
@@ -12,8 +23,15 @@ package.check <- lapply(
   }
 )
 
+```
 
+## Custom Functions
 
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
 # Define our RMSE and RMSLE functions to evaluate our model
 r2 <- function(actual, predicted){
   TSS <- sum((actual - mean(actual))^2)
@@ -29,10 +47,6 @@ rmsle <- function(actual, fitted) {
   sqrt(mean((log(fitted+1) - log(actual+1))^2))
 }
 
-rsq <- function (actual, fitted) {
-  cor(actual, fitted) ^ 2
-}
-
 calc_mode <- function(x){
   # List the distinct / unique values
   distinct_values <- na.omit(unique(x))
@@ -42,8 +56,13 @@ calc_mode <- function(x){
   distinct_values[which.max(distinct_tabulate)]
 }
 
+```
 
+## Cleaning the data
 
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
 # Determine how many NAs there are in the data
 read.csv("train.csv") %>%
   sapply(function(x) sum(is.na(x)))
@@ -53,6 +72,8 @@ read.csv("test.csv") %>%
 
 
 # Clean our data
+###### There are some outliers that we might consider removing from our model. Anything more than 4,000 SF GrLivArea or 6,000 SF TotalSF
+
 cleaner <- function(dirty_data) {
   clean_data <- dirty_data %>%
     mutate(
@@ -61,10 +82,10 @@ cleaner <- function(dirty_data) {
       MSZoning = factor(MSZoning, levels = c("A", "C (all)", "FV", "I", "RH", "RL", "RP", "RM", "NoZone")),
       
       LotFrontage = LotFrontage %>% replace_na(0), # Train data: HAS NAs; Test data: HAS NAs
-      LotFrontage = log(LotFrontage + 1),
+      LotFrontage = log(LotFrontage),
       
       # Logging LotArea in the cleaner function rather than the read csv function
-      LotArea = log(LotArea +1),
+      LotArea = log(LotArea),
       
       Street = factor(Street),
       Alley = Alley %>% replace_na("NoAcc"), # Replace NAs with NoAcc # HAS NAs
@@ -123,14 +144,13 @@ cleaner <- function(dirty_data) {
       TotalBsmtSF = TotalBsmtSF %>% replace_na(0), # Test data: HAS 1 NA
       
       TotalSF = TotalBsmtSF + GrLivArea,
-      TotalSF = log(TotalSF +1),
+      TotalSF = log(TotalSF),
       
       # Logging
-      BsmtFinSF1 = log(BsmtFinSF1 +1), # Highly skewed right with most values at 0
-      BsmtFinSF2 = log(BsmtFinSF2 +1), # Most values at 0
-
+      BsmtFinSF1 = log(BsmtFinSF1), # Highly skewed right with most values at 0
+      BsmtFinSF2 = log(BsmtFinSF2), # Most values at 0
       #BsmtUnfSF = log(BsmtUnfSF), # Negative beneift when logged
-      TotalBsmtSF = log(TotalBsmtSF +1), 
+      TotalBsmtSF = log(TotalBsmtSF), 
       
       Heating = factor(Heating),
       HeatingQC = factor(HeatingQC, levels = c("Po", "Fa", "TA", "Gd", "Ex")),
@@ -140,11 +160,11 @@ cleaner <- function(dirty_data) {
       
       # Logging X1stFlrSF in cleaner function rather than read csv function
       # X1stFlrSF = log(X1stFlrSF), # No benefit in logging
-      X2ndFlrSF = log(X2ndFlrSF +1),
-      LowQualFinSF = log(LowQualFinSF +1),
+      X2ndFlrSF = log(X2ndFlrSF),
+      LowQualFinSF = log(LowQualFinSF),
       
       # Logging in cleaner function rather than read csv function
-      GrLivArea = log(GrLivArea +1),
+      GrLivArea = log(GrLivArea),
       
       BsmtFullBath  = BsmtFullBath %>% replace_na(0), # Test data: HAS 2 NAs
       BsmtHalfBath  = BsmtHalfBath %>% replace_na(0), # Test data: HAS 2 NAs
@@ -171,10 +191,10 @@ cleaner <- function(dirty_data) {
       GarageType = GarageType %>% replace_na("NoGrge"), #NAs should specify no garage # HAS NAs
       GarageType = factor(GarageType), # HAS NAs
       
-      GarageYrBlt = GarageYrBlt %>% replace_na(0), # NAs should use the median [1980] to not mess with the data # HAS NAs
+      GarageYrBlt = GarageYrBlt %>% replace_na(1980), # NAs should use the median [1980] to not mess with the data # HAS NAs
       
       # Logging
-      GarageYrBlt = log(GarageYrBlt +1),
+      GarageYrBlt = log(GarageYrBlt),
       
       GarageFinish = GarageFinish  %>% replace_na("NoGrge"), # HAS NAs
       GarageFinish = factor(GarageFinish), # NAs should specify no garage # HAS NAs
@@ -196,9 +216,9 @@ cleaner <- function(dirty_data) {
       
       # Logging
       #   WoodDeckSF = log(WoodDeckSF), # No beneift in logging
-      OpenPorchSF = log(OpenPorchSF +1),
-      EnclosedPorch = log(EnclosedPorch +1),
-      X3SsnPorch = log(X3SsnPorch +1),
+      OpenPorchSF = log(OpenPorchSF),
+      EnclosedPorch = log(EnclosedPorch),
+      X3SsnPorch = log(X3SsnPorch),
       #   ScreenPorch = log(ScreenPorch), # No benefit in logging
       #   PoolArea = log(PoolArea), # No benfit in logging
       
@@ -218,47 +238,38 @@ cleaner <- function(dirty_data) {
       SaleType = factor(SaleType),
       SaleType = SaleType %>% replace_na(calc_mode(levels(SaleType))), # Test data has 1 NA
       
-      SaleCondition = factor(SaleCondition),
-      YrBltAndRemod = YearBuilt + YearRemodAdd,
-      TotalSF = TotalBsmtSF + X1stFlrSF + X2ndFlrSF,
-      Total_Sq_Footage = (BsmtFinSF1 + BsmtFinSF2 + X1stFlrSF + X2ndFlrSF),
-      Total_Bathrooms = (FullBath + (.5 * HalfBath) + BsmtFullBath + (.5 * BsmtHalfBath)),
-      Total_Porch_SF = (OpenPorchSF + X3SsnPorch + EnclosedPorch + ScreenPorch + WoodDeckSF),
-      HasPool = ifelse(PoolArea > 0, 1, 0),
-      Has2ndFloor = ifelse(X2ndFlrSF > 0, 1, 0),
-      HasGarage = ifelse(GarageArea > 0, 1, 0),
-      HasBsmt = ifelse(TotalBsmtSF > 0, 1, 0),
-      HasFireplace = ifelse(Fireplaces > 0, 1, 0)
+      SaleCondition = factor(SaleCondition)
     )
   return(clean_data)
 }
 
+```
 
+## Read data into environment
+
+You can also embed plots, for example:
+
+```{r}
 # Read in the data from CSV to RStudio
-train_data <- read.csv("c:/users/acbar/onedrive/documents/is6489/project/house-prices-advanced-regression-techniques/train.csv") %>%
+train_data <- read.csv("train.csv") %>%
   cleaner() %>%
   mutate(SalePrice = log(SalePrice))
-
-train_data <- train_data %>% 
-  select(-Utilities, -Street, -PoolQC)
-
 
 complete.cases(train_data) %>% all
 
 
-test_data <- read.csv("c:/users/acbar/onedrive/documents/is6489/project/house-prices-advanced-regression-techniques/test.csv") %>%
+test_data <- read.csv("test.csv") %>%
   cleaner()
-
-test_data <- test_data %>% 
-  select(-Utilities, -Street, -PoolQC)
 
 complete.cases(test_data) %>% all
 
+```
 
-###### There are some outliers that we might consider removing from our model. Anything more than 4,000 SF GrLivArea or 6,000 SF TotalSF
+## Build linear model
 
+Here is the linear model created.
 
-
+```{r}
 # Create linaer model with GLMNET using CARET
 set.seed(123)
 c_lm <- train(SalePrice ~
@@ -270,15 +281,15 @@ c_lm <- train(SalePrice ~
 #                Alley +
 #                LotShape +
 #                LandContour +
+                Utilities +
                 LotConfig +
                 LandSlope +
                 Condition1 +
                 Condition2 +
                 BldgType +
                 HouseStyle +
-                OverallQual * Neighborhood + 
+                OverallQual * Neighborhood + # A discussion post recommended using the GrLivArea multiplied by the OverallQual
                 OverallQual * GrLivArea +
-                GrLivArea * Neighborhood +
                 TotalSF * Neighborhood +
                 OverallCond * Neighborhood +
                 YearBuilt +
@@ -320,7 +331,7 @@ c_lm <- train(SalePrice ~
                 Fireplaces +
                 FireplaceQu +
                 GarageType +
-                #   GarageYrBlt +
+                GarageYrBlt +
                 GarageFinish +
                 GarageCars +
                 GarageCond +
@@ -333,64 +344,58 @@ c_lm <- train(SalePrice ~
                 X3SsnPorch +
                 ScreenPorch +
                 PoolArea +
+                PoolQC +
                 Fence +
                 MiscFeature +
                 MiscVal +
                 MoSold +
                 YrSold +
                 SaleType +
-                SaleCondition +
-                TotalSF +
-                Total_Sq_Footage +
-                Total_Bathrooms +
-                Total_Porch_SF +
-                HasPool +
-                Has2ndFloor +
-                HasGarage +
-                HasBsmt +
-                HasFireplace,
-                data = train_data,
-                preProcess = c("center", "scale"),
-                method = "glmnet")
+                SaleCondition, 
+              data = train_data,
+              preProcess = c("center", "scale"),
+              method = "glmnet")
+```
+
+## Evaluating the linaer model
 
 
+```{r}
 #In-sample performance
-#R^2
-rsq(exp(train_data$SalePrice), exp(fitted(c_lm)))
-#RSME
-rmse(exp(train_data$SalePrice), exp(fitted(c_lm)))
-#RSMLE
-rmsle(exp(train_data$SalePrice), exp(fitted(c_lm)))
+summary(c_lm)
+rmse(train_data$SalePrice, exp(fitted(c_lm)))
+rmsle(train_data$SalePrice, exp(fitted(c_lm)))
 
 #Out-of-sample performance
-best_alpha <- c_lm$results[c_lm$results$alpha==c_lm$bestTune$alpha, ]
-best_alpha_lambda <- best_alpha[best_alpha$lambda==c_lm$bestTune$lambda, ]
-#R^2
-best_alpha_lambda$Rsquared
-#RSMLE
-best_alpha_lambda$RMSE
-
-#90% Ridge Regression and 10# Lasso Regression Coefficients Removed
-c_lm_coeffs <- coef(c_lm$finalModel, c_lm$bestTune$lambda)
-c_lm_Rmvd_Coef <- c_lm_coeffs[c_lm_coeffs[,1]==0,0]
-c_lm_Rmvd_Coef
-nrow(c_lm_Rmvd_Coef)
-c_lm_Kept_Coef <- c_lm_coeffs[c_lm_coeffs[,1]!=0,0]
-c_lm_Kept_Coef
-nrow(c_lm_Kept_Coef)
+c_lm$results
+```
 
 
-c_lm$bestTune
+## Attempt at a random forest
+
+```{r}
+
+set.seed(123)
+c_rf <- train(SalePrice ~ .,
+              data = train_data,
+              method = "rf",
+              preProcess = c("center", "scale"),
+              importance = TRUE,
+              trControl = trainControl(method = "cv", number = 3))
+
+print(c_rf)
 
 
+```
 
+## Creating the submission file
 
+```{r}
 submission_data <- test_data %>%
   select(Id) %>%
   mutate(SalePrice = exp(predict(c_lm, test_data)))
 
-write.csv(submission_data, "c:/users/acbar/onedrive/documents/is6489/project/submission_file.csv", row.names=FALSE)
-
+write.csv(submission_data, "submission_file.csv", row.names=FALSE)
 
 #Kaggle submission results:
 
@@ -439,6 +444,11 @@ write.csv(submission_data, "c:/users/acbar/onedrive/documents/is6489/project/sub
 
 #Rubric score	Kaggle score (log RMSE)
 # 10  <.12
-# 9	  <.13 <- Current Score
+# 9	  <.13
 # 8	  <.14 
-# 7	  <.15
+# 7	  <.15 <- Current Score
+# 6	  <.16 
+# 5	  <.17
+```
+
+
