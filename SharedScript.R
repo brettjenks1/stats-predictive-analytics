@@ -282,12 +282,18 @@ c_lm <- train(SalePrice ~ MSSubClass +
 
 
 #In-sample performance
+#R^2
 rsq(exp(train_data$SalePrice), exp(fitted(c_lm)))
+#RSME
 rmse(exp(train_data$SalePrice), exp(fitted(c_lm)))
+#RSMLE
 rmsle(exp(train_data$SalePrice), exp(fitted(c_lm)))
 
 #Out-of-sample performance
-c_lm$results
+#R^2
+c_lm$results[c_lm$results$alpha==c_lm$bestTune$alpha, ]$Rsquared
+#RSME
+c_lm$results[c_lm$results$alpha==c_lm$bestTune$alpha, ]$RMSE
 
 ###############################################################
 
