@@ -1,7 +1,6 @@
 # This installs the packages if you don't have them, and loads them into your environment.
 # If you need more packages, add them to the packages vector.
-
-packages <- c("tidyverse", "faux", "DataExplorer", "randomForest", "caret", "corrplot", "modelr", "stats", "rpart.plot", "mlbench")
+packages <- c("tidyverse", "faux", "DataExplorer", "randomForest", "caret", "corrplot", "modelr", "stats", "rpart.plot", "mlbench", "imputeMissings")
 
 package.check <- lapply(
   packages,
@@ -12,6 +11,15 @@ package.check <- lapply(
     }
   }
 )
+
+
+
+# Define our RMSE and RMSLE functions to evaluate our model
+r2 <- function(actual, predicted){
+  TSS <- sum((actual - mean(actual))^2)
+  RSS <- sum((actual - predicted)^2)
+  1 - RSS/TSS
+}
 
 rmse <- function(actual, fitted){
   sqrt(mean((actual - fitted)^2))
@@ -31,12 +39,16 @@ calc_mode <- function(x){
 }
 
 
+
+# Determine how many NAs there are in the data
 read.csv("train.csv") %>%
   sapply(function(x) sum(is.na(x)))
 
 read.csv("test.csv") %>%
   sapply(function(x) sum(is.na(x)))
 
+
+# Clean our data
 cleaner <- function(dirty_data) {
   clean_data <- dirty_data %>%
     mutate(
@@ -82,7 +94,7 @@ cleaner <- function(dirty_data) {
       Exterior2nd = factor(Exterior2nd),
       MasVnrType = MasVnrType %>% replace_na("None"), # Train data: HAS NAs; Test data: HAS NAs
       MasVnrType = factor(MasVnrType),
-      MasVnrArea = MasVnrArea %>% replace_na(0), # Train data: HAS NAs; Test data: No NAs # NAs should be replaced with 0 since we don't know what NA means in this context
+      MasVnrArea = MasVnrArea %>% replace_na(0), # Train data: HAS NAs; Test data: No NAs
       
       # MasVnrArea - log(MasVnrArea), # No benefit in logging it
       
@@ -124,7 +136,7 @@ cleaner <- function(dirty_data) {
       # Logging X1stFlrSF in cleaner function rather than read csv function
       # X1stFlrSF = log(X1stFlrSF), # No benefit in logging
       X2ndFlrSF = log(X2ndFlrSF),
-      LowQualFinSF = log(LowQualFinSF), # Probably doesn't logged
+      LowQualFinSF = log(LowQualFinSF),
       
       # Logging in cleaner function rather than read csv function
       GrLivArea = log(GrLivArea),
@@ -164,7 +176,7 @@ cleaner <- function(dirty_data) {
       
       GarageCars = GarageCars %>% replace_na(0), # Test data: HAS 1 NA
       
-      GarageArea = GarageArea %>% replace_na(0),
+      GarageArea = GarageArea %>% replace_na(0), # Test data: HAS 1 NA
       
       # Logging
       #   GarageArea = log(GarageArea),
@@ -206,24 +218,37 @@ cleaner <- function(dirty_data) {
   return(clean_data)
 }
 
+
+
+# Read in the data from CSV to RStudio
 train_data <- read.csv("train.csv") %>%
   cleaner() %>%
   mutate(SalePrice = log(SalePrice))
 
-###### There are some outliers that we might consider removing from our model. Anything more than 4,000 SF GrLivArea or 6,000 SF TotalSF
+complete.cases(train_data) %>% all
+
 
 test_data <- read.csv("test.csv") %>%
   cleaner()
 
+complete.cases(test_data) %>% all
+
+
+###### There are some outliers that we might consider removing from our model. Anything more than 4,000 SF GrLivArea or 6,000 SF TotalSF
+
+
+
+# Create linaer model with GLMNET using CARET
 set.seed(123)
-c_lm <- train(SalePrice ~ MSSubClass +
+c_lm <- train(SalePrice ~
+                MSSubClass +
                 MSZoning +
                 LotFrontage +
                 LotArea +
-                Street +
-                Alley +
-                LotShape +
-                LandContour +
+#                Street +
+#                Alley +
+#                LotShape +
+#                LandContour +
                 Utilities +
                 LotConfig +
                 LandSlope +
@@ -232,10 +257,9 @@ c_lm <- train(SalePrice ~ MSSubClass +
                 BldgType +
                 HouseStyle +
                 OverallQual * Neighborhood + # A discussion post recommended using the GrLivArea multiplied by the OverallQual
-                GrLivArea +
-                TotalSF *
-                Neighborhood +
-                OverallCond +
+                OverallQual * GrLivArea +
+                TotalSF * Neighborhood +
+                OverallCond * Neighborhood +
                 YearBuilt +
                 YearRemodAdd +
                 RoofStyle +
@@ -300,8 +324,9 @@ c_lm <- train(SalePrice ~ MSSubClass +
               preProcess = c("center", "scale"),
               method = "glmnet")
 
-#Out of sample performance
+#Out-of-sample performance
 c_lm$results
+
 
 
 #In-sample performance
@@ -312,12 +337,10 @@ rmsle(train_data$SalePrice, exp(fitted(c_lm)))
 #Out-of-sample performance
 c_lm$results
 
+
+
 ###############################################################
-
 # Identify Highly correlated predictors
-
-# Numeric Correlation Coefficients
-
 t <- train_data %>%
   select(where(is.numeric))
 
@@ -326,10 +349,8 @@ v <- t %>%
 
 o <- cor(t$SalePrice, v)
 
-
-# Highly correlated to each other
 correlMatrix <- cor(v[,2:31])
-(highCorrel <- findCorrelation(correlMatrix, cutoff=0.75, names = TRUE, verbose = TRUE))
+(highCorrel <- findCorrelation(x = correlMatrix, cutoff = 0.75, names = TRUE, verbose = TRUE))
 print(correlMatrix[,highCorrel])
 
 cor(train_data$GrLivArea, train_data$TotRmsAbvGrd)
