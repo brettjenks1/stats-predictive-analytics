@@ -295,6 +295,15 @@ c_lm$results[c_lm$results$alpha==c_lm$bestTune$alpha, ]$Rsquared
 #RSME
 c_lm$results[c_lm$results$alpha==c_lm$bestTune$alpha, ]$RMSE
 
+#90% Ridge Regression and 10# Lasso Regression Coefficients Removed
+c_lm_coeffs <- coef(c_lm$finalModel, c_lm$bestTune$lambda)
+c_lm_Rmvd_Coef <- c_lm_coeffs[c_lm_coeffs[,1]==0,0]
+c_lm_Rmvd_Coef
+nrow(c_lm_Rmvd_Coef)
+c_lm_Kept_Coef <- c_lm_coeffs[c_lm_coeffs[,1]!=0,0]
+c_lm_Kept_Coef
+nrow(c_lm_Kept_Coef)
+
 ###############################################################
 
 # Identify Highly correlated predictors
