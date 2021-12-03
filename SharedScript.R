@@ -1,6 +1,6 @@
 # This installs the packages if you don't have them, and loads them into your environment.
 # If you need more packages, add them to the packages vector.
-packages <- c("tidyverse", "faux", "DataExplorer", "randomForest", "caret", "corrplot", "modelr", "stats", "rpart.plot", "mlbench", "imputeMissings")
+packages <- c("tidyverse", "faux", "DataExplorer", "randomForest", "caret", "corrplot", "modelr", "stats", "rpart.plot", "mlbench", "imputeMissings", "ggplot2", "cowplot")
 
 package.check <- lapply(
   packages,
@@ -57,10 +57,10 @@ cleaner <- function(dirty_data) {
       MSZoning = factor(MSZoning, levels = c("A", "C (all)", "FV", "I", "RH", "RL", "RP", "RM", "NoZone")),
       
       LotFrontage = LotFrontage %>% replace_na(0), # Train data: HAS NAs; Test data: HAS NAs
-      LotFrontage = log(LotFrontage),
+      LotFrontage = log(LotFrontage + 1),
       
       # Logging LotArea in the cleaner function rather than the read csv function
-      LotArea = log(LotArea),
+      LotArea = log(LotArea +1),
       
       Street = factor(Street),
       Alley = Alley %>% replace_na("NoAcc"), # Replace NAs with NoAcc # HAS NAs
@@ -119,13 +119,14 @@ cleaner <- function(dirty_data) {
       TotalBsmtSF = TotalBsmtSF %>% replace_na(0), # Test data: HAS 1 NA
       
       TotalSF = TotalBsmtSF + GrLivArea,
-      TotalSF = log(TotalSF),
+      TotalSF = log(TotalSF +1),
       
       # Logging
-      BsmtFinSF1 = log(BsmtFinSF1), # Highly skewed right with most values at 0
-      BsmtFinSF2 = log(BsmtFinSF2), # Most values at 0
+      BsmtFinSF1 = log(BsmtFinSF1 +1), # Highly skewed right with most values at 0
+      BsmtFinSF2 = log(BsmtFinSF2 +1), # Most values at 0
+
       #BsmtUnfSF = log(BsmtUnfSF), # Negative beneift when logged
-      TotalBsmtSF = log(TotalBsmtSF), 
+      TotalBsmtSF = log(TotalBsmtSF +1), 
       
       Heating = factor(Heating),
       HeatingQC = factor(HeatingQC, levels = c("Po", "Fa", "TA", "Gd", "Ex")),
@@ -135,11 +136,11 @@ cleaner <- function(dirty_data) {
       
       # Logging X1stFlrSF in cleaner function rather than read csv function
       # X1stFlrSF = log(X1stFlrSF), # No benefit in logging
-      X2ndFlrSF = log(X2ndFlrSF),
-      LowQualFinSF = log(LowQualFinSF),
+      X2ndFlrSF = log(X2ndFlrSF +1),
+      LowQualFinSF = log(LowQualFinSF +1),
       
       # Logging in cleaner function rather than read csv function
-      GrLivArea = log(GrLivArea),
+      GrLivArea = log(GrLivArea +1),
       
       BsmtFullBath  = BsmtFullBath %>% replace_na(0), # Test data: HAS 2 NAs
       BsmtHalfBath  = BsmtHalfBath %>% replace_na(0), # Test data: HAS 2 NAs
@@ -166,10 +167,10 @@ cleaner <- function(dirty_data) {
       GarageType = GarageType %>% replace_na("NoGrge"), #NAs should specify no garage # HAS NAs
       GarageType = factor(GarageType), # HAS NAs
       
-      GarageYrBlt = GarageYrBlt %>% replace_na(1980), # NAs should use the median [1980] to not mess with the data # HAS NAs
+      GarageYrBlt = GarageYrBlt %>% replace_na(0), # NAs should use the median [1980] to not mess with the data # HAS NAs
       
       # Logging
-      GarageYrBlt = log(GarageYrBlt),
+      GarageYrBlt = log(GarageYrBlt +1),
       
       GarageFinish = GarageFinish  %>% replace_na("NoGrge"), # HAS NAs
       GarageFinish = factor(GarageFinish), # NAs should specify no garage # HAS NAs
@@ -191,9 +192,9 @@ cleaner <- function(dirty_data) {
       
       # Logging
       #   WoodDeckSF = log(WoodDeckSF), # No beneift in logging
-      OpenPorchSF = log(OpenPorchSF),
-      EnclosedPorch = log(EnclosedPorch),
-      X3SsnPorch = log(X3SsnPorch),
+      OpenPorchSF = log(OpenPorchSF +1),
+      EnclosedPorch = log(EnclosedPorch +1),
+      X3SsnPorch = log(X3SsnPorch +1),
       #   ScreenPorch = log(ScreenPorch), # No benefit in logging
       #   PoolArea = log(PoolArea), # No benfit in logging
       
@@ -217,7 +218,6 @@ cleaner <- function(dirty_data) {
     )
   return(clean_data)
 }
-
 
 
 # Read in the data from CSV to RStudio
@@ -256,8 +256,9 @@ c_lm <- train(SalePrice ~
                 Condition2 +
                 BldgType +
                 HouseStyle +
-                OverallQual * Neighborhood + # A discussion post recommended using the GrLivArea multiplied by the OverallQual
+                OverallQual * Neighborhood + 
                 OverallQual * GrLivArea +
+                GrLivArea * Neighborhood +
                 TotalSF * Neighborhood +
                 OverallCond * Neighborhood +
                 YearBuilt +
@@ -299,7 +300,7 @@ c_lm <- train(SalePrice ~
                 Fireplaces +
                 FireplaceQu +
                 GarageType +
-                GarageYrBlt +
+                #   GarageYrBlt +
                 GarageFinish +
                 GarageCars +
                 GarageCond +
@@ -340,12 +341,18 @@ c_lm$results
 t <- train_data %>%
   select(where(is.numeric))
 
+is.na(t) <- sapply(t, is.infinite)
+t[is.na(t)] <- 0
+
 v <- t %>%
   select(-SalePrice)
 
 o <- cor(t$SalePrice, v)
 
-correlMatrix <- cor(v[,2:31])
+correlMatrix <- cor(v[,2:34])
+print(correlMatrix)
+
+
 (highCorrel <- findCorrelation(x = correlMatrix, cutoff = 0.75, names = TRUE, verbose = TRUE))
 print(correlMatrix[,highCorrel])
 
@@ -383,41 +390,19 @@ cor(train_data$GarageCars, train_data$SalePrice)
 ###############################################################
 
 # Attempting a Random Forest Model
-set.seed(123)
-inTrain <- createDataPartition(train_data$SalePrice, p = 0.8, list = FALSE)
-rf.train <- train_data[inTrain,]
-rf.test <- train_data[-inTrain,]
 
 set.seed(123)
-c_rf <- train(SalePrice ~ OverallQual * GrLivArea +
-                OverallCond +
-                YrSold +
-                SaleType +
-                SaleCondition,
+c_rf <- train(SalePrice ~ .,
               data = train_data,
               method = "rf",
+              preProcess = c("center", "scale"),
               importance = TRUE,
-              trControl = trainControl(method = "cv", number = 5))
+              trControl = trainControl(method = "cv", number = 3))
 
 print(c_rf)
 
-rf_model <- randomForest(SalePrice ~ OverallQual * GrLivArea +
-                           OverallCond +
-                           YrSold +
-                           SaleType +
-                           SaleCondition,
-                         data = train_data,
-                         mtry = 2,
-                         importance = TRUE,
-                         na.action = na.omit)
-
-print(rf_model)
-plot(rf_model)
-(rf_pred <- predict(c_rf, data.test))
-# (confusionMatrix(table(rf.test[,"SalePrice"],pred)))
 
 ###############################################################
-
 
 
 submission_data <- test_data %>%
