@@ -29,6 +29,10 @@ rmsle <- function(actual, fitted) {
   sqrt(mean((log(fitted+1) - log(actual+1))^2))
 }
 
+rsq <- function (actual, fitted) {
+  cor(actual, fitted) ^ 2
+}
+
 calc_mode <- function(x){
   # List the distinct / unique values
   distinct_values <- na.omit(unique(x))
@@ -351,12 +355,29 @@ c_lm <- train(SalePrice ~
 
 
 #In-sample performance
-summary(c_lm)
-rmse(train_data$SalePrice, exp(fitted(c_lm)))
-rmsle(train_data$SalePrice, exp(fitted(c_lm)))
+#R^2
+rsq(exp(train_data$SalePrice), exp(fitted(c_lm)))
+#RSME
+rmse(exp(train_data$SalePrice), exp(fitted(c_lm)))
+#RSMLE
+rmsle(exp(train_data$SalePrice), exp(fitted(c_lm)))
 
 #Out-of-sample performance
-c_lm$results
+best_alpha <- c_lm$results[c_lm$results$alpha==c_lm$bestTune$alpha, ]
+best_alpha_lambda <- best_alpha[best_alpha$lambda==c_lm$bestTune$lambda, ]
+#R^2
+best_alpha_lambda$Rsquared
+#RSMLE
+best_alpha_lambda$RMSE
+
+#90% Ridge Regression and 10# Lasso Regression Coefficients Removed
+c_lm_coeffs <- coef(c_lm$finalModel, c_lm$bestTune$lambda)
+c_lm_Rmvd_Coef <- c_lm_coeffs[c_lm_coeffs[,1]==0,0]
+c_lm_Rmvd_Coef
+nrow(c_lm_Rmvd_Coef)
+c_lm_Kept_Coef <- c_lm_coeffs[c_lm_coeffs[,1]!=0,0]
+c_lm_Kept_Coef
+nrow(c_lm_Kept_Coef)
 
 
 c_lm$bestTune
