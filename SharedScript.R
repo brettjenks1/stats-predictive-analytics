@@ -290,10 +290,12 @@ rmse(exp(train_data$SalePrice), exp(fitted(c_lm)))
 rmsle(exp(train_data$SalePrice), exp(fitted(c_lm)))
 
 #Out-of-sample performance
+best_alpha <- c_lm$results[c_lm$results$alpha==c_lm$bestTune$alpha, ]
+best_alpha_lambda <- best_alpha[best_alpha$lambda==c_lm$bestTune$lambda, ]
 #R^2
-c_lm$results[c_lm$results$alpha==c_lm$bestTune$alpha, ]$Rsquared
-#RSME
-c_lm$results[c_lm$results$alpha==c_lm$bestTune$alpha, ]$RMSE
+best_alpha_lambda$Rsquared
+#RSMLE
+best_alpha_lambda$RMSE
 
 #90% Ridge Regression and 10# Lasso Regression Coefficients Removed
 c_lm_coeffs <- coef(c_lm$finalModel, c_lm$bestTune$lambda)
