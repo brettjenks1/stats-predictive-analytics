@@ -219,38 +219,35 @@ cleaner <- function(dirty_data) {
       SaleType = SaleType %>% replace_na(calc_mode(levels(SaleType))), # Test data has 1 NA
       
       SaleCondition = factor(SaleCondition),
+      
+      # New Predictors
       YrBltAndRemod = YearBuilt + YearRemodAdd,
       TotalSF = TotalBsmtSF + X1stFlrSF + X2ndFlrSF,
-      Total_Sq_Footage = (BsmtFinSF1 + BsmtFinSF2 + X1stFlrSF + X2ndFlrSF),
-      Total_Bathrooms = (FullBath + (.5 * HalfBath) + BsmtFullBath + (.5 * BsmtHalfBath)),
-      Total_Porch_SF = (OpenPorchSF + X3SsnPorch + EnclosedPorch + ScreenPorch + WoodDeckSF),
+      Total_Sq_Footage = (BsmtFinSF1 + BsmtFinSF2 + X1stFlrSF + X2ndFlrSF),#Kept by Ridge Regression
+      Total_Bathrooms = (FullBath + (.5 * HalfBath) + BsmtFullBath + (.5 * BsmtHalfBath)),#Kept by Ridge Regression
+      Total_Porch_SF = (OpenPorchSF + X3SsnPorch + EnclosedPorch + ScreenPorch + WoodDeckSF),#Kept by Ridge Regression
       HasPool = ifelse(PoolArea > 0, 1, 0),
       Has2ndFloor = ifelse(X2ndFlrSF > 0, 1, 0),
-      HasGarage = ifelse(GarageArea > 0, 1, 0),
-      HasBsmt = ifelse(TotalBsmtSF > 0, 1, 0),
-      HasFireplace = ifelse(Fireplaces > 0, 1, 0)
+      HasGarage = ifelse(GarageArea > 0, 1, 0),#Kept by Ridge Regression
+      HasBsmt = ifelse(TotalBsmtSF > 0, 1, 0),    
+      HasFireplace = ifelse(Fireplaces > 0, 1, 0)#Kept by Ridge Regression
     )
   return(clean_data)
 }
 
 
 # Read in the data from CSV to RStudio
-train_data <- read.csv("c:/users/acbar/onedrive/documents/is6489/project/house-prices-advanced-regression-techniques/train.csv") %>%
+train_data <- read.csv("train.csv") %>%
   cleaner() %>%
+  select(-Utilities, -Street, -PoolQC) %>%
   mutate(SalePrice = log(SalePrice))
-
-train_data <- train_data %>% 
-  select(-Utilities, -Street, -PoolQC)
-
 
 complete.cases(train_data) %>% all
 
-
-test_data <- read.csv("c:/users/acbar/onedrive/documents/is6489/project/house-prices-advanced-regression-techniques/test.csv") %>%
-  cleaner()
-
-test_data <- test_data %>% 
+test_data <- read.csv("test.csv") %>%
+  cleaner() %>% 
   select(-Utilities, -Street, -PoolQC)
+
 
 complete.cases(test_data) %>% all
 
@@ -266,10 +263,9 @@ c_lm <- train(SalePrice ~
                 MSZoning +
                 LotFrontage +
                 LotArea +
-#                Street +
-#                Alley +
-#                LotShape +
-#                LandContour +
+                Alley +
+                LotShape +
+                LandContour +
                 LotConfig +
                 LandSlope +
                 Condition1 +
@@ -340,7 +336,7 @@ c_lm <- train(SalePrice ~
                 YrSold +
                 SaleType +
                 SaleCondition +
-                TotalSF +
+                #   TotalSF + #Duplicate because interaction
                 Total_Sq_Footage +
                 Total_Bathrooms +
                 Total_Porch_SF +
@@ -380,16 +376,11 @@ c_lm_Kept_Coef
 nrow(c_lm_Kept_Coef)
 
 
-c_lm$bestTune
-
-
-
-
 submission_data <- test_data %>%
   select(Id) %>%
   mutate(SalePrice = exp(predict(c_lm, test_data)))
 
-write.csv(submission_data, "c:/users/acbar/onedrive/documents/is6489/project/submission_file.csv", row.names=FALSE)
+write.csv(submission_data, "submission_file.csv", row.names=FALSE)
 
 
 #Kaggle submission results:
