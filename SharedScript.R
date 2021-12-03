@@ -324,10 +324,6 @@ c_lm <- train(SalePrice ~
               preProcess = c("center", "scale"),
               method = "glmnet")
 
-#Out-of-sample performance
-c_lm$results
-
-
 
 #In-sample performance
 summary(c_lm)
@@ -424,15 +420,6 @@ plot(rf_model)
 
 
 
-# We need to do all the manipulations to the data we are going to be testing as we do to the train data. Once that dataframe is defined, we can apply the predict function with the linear model of our choosing.
-
-
-# predict_prices <- predict(m_lm, test_data)
-# submission_data <- data.frame('Id' = test_data$Id, 'SalePrice' = predict_prices)
-
-# submission_data <- add_predictions(test_data, m_lm, var = "SalePrice")
-
-
 submission_data <- test_data %>%
   select(Id) %>%
   mutate(SalePrice = exp(predict(c_lm, test_data)))
@@ -487,8 +474,6 @@ write.csv(submission_data, "submission_file.csv", row.names=FALSE)
 
 #Rubric score	Kaggle score (log RMSE)
 # 10  <.12
-# 9	  <.13
+# 9	  <.13 <- Current Score
 # 8	  <.14 
-# 7	  <.15 <- Current Score
-# 6	  <.16 
-# 5	  <.17
+# 7	  <.15
