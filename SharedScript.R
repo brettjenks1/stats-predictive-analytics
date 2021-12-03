@@ -214,22 +214,39 @@ cleaner <- function(dirty_data) {
       SaleType = factor(SaleType),
       SaleType = SaleType %>% replace_na(calc_mode(levels(SaleType))), # Test data has 1 NA
       
-      SaleCondition = factor(SaleCondition)
+      SaleCondition = factor(SaleCondition),
+      YrBltAndRemod = YearBuilt + YearRemodAdd,
+      TotalSF = TotalBsmtSF + X1stFlrSF + X2ndFlrSF,
+      Total_Sq_Footage = (BsmtFinSF1 + BsmtFinSF2 + X1stFlrSF + X2ndFlrSF),
+      Total_Bathrooms = (FullBath + (.5 * HalfBath) + BsmtFullBath + (.5 * BsmtHalfBath)),
+      Total_Porch_SF = (OpenPorchSF + X3SsnPorch + EnclosedPorch + ScreenPorch + WoodDeckSF),
+      HasPool = ifelse(PoolArea > 0, 1, 0),
+      Has2ndFloor = ifelse(X2ndFlrSF > 0, 1, 0),
+      HasGarage = ifelse(GarageArea > 0, 1, 0),
+      HasBsmt = ifelse(TotalBsmtSF > 0, 1, 0),
+      HasFireplace = ifelse(Fireplaces > 0, 1, 0)
     )
   return(clean_data)
 }
 
 
 # Read in the data from CSV to RStudio
-train_data <- read.csv("train.csv") %>%
+train_data <- read.csv("c:/users/acbar/onedrive/documents/is6489/project/house-prices-advanced-regression-techniques/train.csv") %>%
   cleaner() %>%
   mutate(SalePrice = log(SalePrice))
+
+train_data <- train_data %>% 
+  select(-Utilities, -Street, -PoolQC)
+
 
 complete.cases(train_data) %>% all
 
 
-test_data <- read.csv("test.csv") %>%
+test_data <- read.csv("c:/users/acbar/onedrive/documents/is6489/project/house-prices-advanced-regression-techniques/test.csv") %>%
   cleaner()
+
+test_data <- test_data %>% 
+  select(-Utilities, -Street, -PoolQC)
 
 complete.cases(test_data) %>% all
 
@@ -249,7 +266,6 @@ c_lm <- train(SalePrice ~
 #                Alley +
 #                LotShape +
 #                LandContour +
-                Utilities +
                 LotConfig +
                 LandSlope +
                 Condition1 +
@@ -313,17 +329,25 @@ c_lm <- train(SalePrice ~
                 X3SsnPorch +
                 ScreenPorch +
                 PoolArea +
-                PoolQC +
                 Fence +
                 MiscFeature +
                 MiscVal +
                 MoSold +
                 YrSold +
                 SaleType +
-                SaleCondition, 
-              data = train_data,
-              preProcess = c("center", "scale"),
-              method = "glmnet")
+                SaleCondition +
+                TotalSF +
+                Total_Sq_Footage +
+                Total_Bathrooms +
+                Total_Porch_SF +
+                HasPool +
+                Has2ndFloor +
+                HasGarage +
+                HasBsmt +
+                HasFireplace,
+                data = train_data,
+                preProcess = c("center", "scale"),
+                method = "glmnet")
 
 
 #In-sample performance
@@ -335,81 +359,16 @@ rmsle(train_data$SalePrice, exp(fitted(c_lm)))
 c_lm$results
 
 
-
-###############################################################
-# Identify Highly correlated predictors
-t <- train_data %>%
-  select(where(is.numeric))
-
-is.na(t) <- sapply(t, is.infinite)
-t[is.na(t)] <- 0
-
-v <- t %>%
-  select(-SalePrice)
-
-o <- cor(t$SalePrice, v)
-
-correlMatrix <- cor(v[,2:34])
-print(correlMatrix)
+c_lm$bestTune
 
 
-(highCorrel <- findCorrelation(x = correlMatrix, cutoff = 0.75, names = TRUE, verbose = TRUE))
-print(correlMatrix[,highCorrel])
-
-cor(train_data$GrLivArea, train_data$TotRmsAbvGrd)
-train_data %>%
-  ggplot(aes(GrLivArea, TotRmsAbvGrd)) +
-  geom_point()
-
-cor(train_data$GrLivArea, train_data$SalePrice)
-
-train_data %>%
-  ggplot(aes(GrLivArea, SalePrice)) +
-  geom_point()
-
-cor(train_data$TotRmsAbvGrd, train_data$SalePrice) # Remove TotRmsAbvGrd from model?
-
-cor(train_data$X1stFlrSF, train_data$TotalBsmtSF)
-train_data %>%
-  ggplot(aes(X1stFlrSF, TotalBsmtSF)) +
-  geom_point()
-
-cor(train_data$X1stFlrSF, train_data$SalePrice) # Remove X1stFlrSF from model?
-cor(train_data$TotalBsmtSF, train_data$SalePrice)
-
-
-cor(train_data$GarageArea, train_data$GarageCars)
-train_data %>%
-  ggplot(aes(GarageArea, GarageCars)) +
-  geom_point()
-
-cor(train_data$GarageArea, train_data$SalePrice) # Remove Garage Area from model?
-cor(train_data$GarageCars, train_data$SalePrice)
-
-
-###############################################################
-
-# Attempting a Random Forest Model
-
-set.seed(123)
-c_rf <- train(SalePrice ~ .,
-              data = train_data,
-              method = "rf",
-              preProcess = c("center", "scale"),
-              importance = TRUE,
-              trControl = trainControl(method = "cv", number = 3))
-
-print(c_rf)
-
-
-###############################################################
 
 
 submission_data <- test_data %>%
   select(Id) %>%
   mutate(SalePrice = exp(predict(c_lm, test_data)))
 
-write.csv(submission_data, "submission_file.csv", row.names=FALSE)
+write.csv(submission_data, "c:/users/acbar/onedrive/documents/is6489/project/submission_file.csv", row.names=FALSE)
 
 
 #Kaggle submission results:
