@@ -21,6 +21,10 @@ rmsle <- function(actual, fitted) {
   sqrt(mean((log(fitted+1) - log(actual+1))^2))
 }
 
+rsq <- function (actual, fitted) {
+  cor(actual, fitted) ^ 2
+}
+
 calc_mode <- function(x){
   # List the distinct / unique values
   distinct_values <- na.omit(unique(x))
@@ -278,9 +282,9 @@ c_lm <- train(SalePrice ~ MSSubClass +
 
 
 #In-sample performance
-summary(c_lm)
-rmse(train_data$SalePrice, exp(fitted(c_lm)))
-rmsle(train_data$SalePrice, exp(fitted(c_lm)))
+rsq(exp(train_data$SalePrice), exp(fitted(c_lm)))
+rmse(exp(train_data$SalePrice), exp(fitted(c_lm)))
+rmsle(exp(train_data$SalePrice), exp(fitted(c_lm)))
 
 #Out-of-sample performance
 c_lm$results
