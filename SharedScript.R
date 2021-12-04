@@ -272,9 +272,9 @@ c_lm <- train(SalePrice ~
                 Condition2 +
                 BldgType +
                 HouseStyle +
-                #Performance of TotalSF interaction was better, doing an interaction on both TotalSF and GrLivAre is somehat redundant
+                #Performance of TotalSF interaction was better, doing an interaction on both TotalSF and GrLivArea is somewhat redundant
                 #GrLivArea * OverallQual  + #Different slopes visible in plot 
-                #GrLivArea * Neighborhood + #Different slopes visible in plot #Performance of just TotalSF was better
+                #GrLivArea * Neighborhood + #Different slopes visible in plot
                 GrLivArea +
                 TotalSF * Neighborhood + #Different slopes visible in plot
                 TotalSF * OverallQual + #Different slopes visible in plot
