@@ -29,9 +29,6 @@ rmsle <- function(actual, fitted) {
   sqrt(mean((log(fitted+1) - log(actual+1))^2))
 }
 
-rsq <- function (actual, fitted) {
-  cor(actual, fitted) ^ 2
-}
 
 calc_mode <- function(x){
   # List the distinct / unique values
@@ -272,11 +269,11 @@ c_lm <- train(SalePrice ~
                 Condition2 +
                 BldgType +
                 HouseStyle +
-                OverallQual * Neighborhood + 
-                OverallQual * GrLivArea +
+                GrLivArea * OverallQual  +
                 GrLivArea * Neighborhood +
                 TotalSF * Neighborhood +
                 OverallCond * Neighborhood +
+                OverallQual * Neighborhood + 
                 YearBuilt +
                 YearRemodAdd +
                 RoofStyle +
@@ -352,7 +349,7 @@ c_lm <- train(SalePrice ~
 
 #In-sample performance
 #R^2
-rsq(exp(train_data$SalePrice), exp(fitted(c_lm)))
+r2(exp(train_data$SalePrice), exp(fitted(c_lm)))
 #RSME
 rmse(exp(train_data$SalePrice), exp(fitted(c_lm)))
 #RSMLE
