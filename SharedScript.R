@@ -12,6 +12,9 @@ package.check <- lapply(
   }
 )
 
+medianWithoutNA<-function(x) {
+  median(x[which(!is.na(x))])
+}
 
 
 # Define our RMSE and RMSLE functions to evaluate our model
@@ -29,9 +32,6 @@ rmsle <- function(actual, fitted) {
   sqrt(mean((log(fitted+1) - log(actual+1))^2))
 }
 
-rsq <- function (actual, fitted) {
-  cor(actual, fitted) ^ 2
-}
 
 calc_mode <- function(x){
   # List the distinct / unique values
@@ -60,8 +60,8 @@ cleaner <- function(dirty_data) {
       MSZoning = MSZoning %>% replace_na("NoZone"), # Train data: No NAs; Test data: HAS NAs
       MSZoning = factor(MSZoning, levels = c("A", "C (all)", "FV", "I", "RH", "RL", "RP", "RM", "NoZone")),
       
-      LotFrontage = LotFrontage %>% replace_na(0), # Train data: HAS NAs; Test data: HAS NAs
-      LotFrontage = log(LotFrontage + 1),
+      #LotFrontage = LotFrontage %>% replace_na(0), # Train data: HAS NAs; Test data: HAS NAs
+      #LotFrontage = log(LotFrontage + 1),
       
       # Logging LotArea in the cleaner function rather than the read csv function
       LotArea = log(LotArea +1),
@@ -93,9 +93,10 @@ cleaner <- function(dirty_data) {
       #Replacing NA with mode
       Exterior1st = factor(Exterior1st), # Train data: No NAs; Test data: HAS 1 NA
       Exterior1st = Exterior1st %>% replace_na(calc_mode(levels(Exterior1st))),
-      
-      Exterior2nd = Exterior2nd %>% replace_na("Other"), #Train data: No NAs; Test data: HAS 1 NA
+
       Exterior2nd = factor(Exterior2nd),
+      Exterior2nd = Exterior2nd %>% replace_na(calc_mode(levels(Exterior2nd))), #Train data: No NAs; Test data: HAS 1 NA
+
       MasVnrType = MasVnrType %>% replace_na("None"), # Train data: HAS NAs; Test data: HAS NAs
       MasVnrType = factor(MasVnrType),
       MasVnrArea = MasVnrArea %>% replace_na(0), # Train data: HAS NAs; Test data: No NAs
@@ -122,8 +123,9 @@ cleaner <- function(dirty_data) {
       BsmtUnfSF = BsmtUnfSF %>% replace_na(0), # Test data: HAS 1 NA
       TotalBsmtSF = TotalBsmtSF %>% replace_na(0), # Test data: HAS 1 NA
       
-      TotalSF = TotalBsmtSF + GrLivArea,
-      TotalSF = log(TotalSF +1),
+      #Duplicate
+      #TotalSF = TotalBsmtSF + GrLivArea,
+      #TotalSF = log(TotalSF +1),
       
       # Logging
       BsmtFinSF1 = log(BsmtFinSF1 +1), # Highly skewed right with most values at 0
@@ -135,7 +137,7 @@ cleaner <- function(dirty_data) {
       Heating = factor(Heating),
       HeatingQC = factor(HeatingQC, levels = c("Po", "Fa", "TA", "Gd", "Ex")),
       CentralAir = factor(CentralAir),
-      Electrical = Electrical %>% replace_na("Mix"), # Train data: HAS NA; Test data: No NAs
+      Electrical = Electrical %>% replace_na("SBrkr"), # Train data: HAS NA; Test data: No NAs
       Electrical = factor(Electrical), # HAS NA
       
       # Logging X1stFlrSF in cleaner function rather than read csv function
@@ -213,7 +215,7 @@ cleaner <- function(dirty_data) {
       
       #    MiscVal = factor(), # Probably doesn't need any mutations
       MoSold = factor(MoSold),
-      #    YrSold = factor(), # Probably doesn't need any mutations
+      YrSold = factor(YrSold), # Probably doesn't need any mutations
       
       SaleType = factor(SaleType),
       SaleType = SaleType %>% replace_na(calc_mode(levels(SaleType))), # Test data has 1 NA
@@ -223,15 +225,21 @@ cleaner <- function(dirty_data) {
       # New Predictors
       YrBltAndRemod = YearBuilt + YearRemodAdd,
       TotalSF = TotalBsmtSF + X1stFlrSF + X2ndFlrSF,
+      
       Total_Sq_Footage = (BsmtFinSF1 + BsmtFinSF2 + X1stFlrSF + X2ndFlrSF),#Kept by Ridge Regression
       Total_Bathrooms = (FullBath + (.5 * HalfBath) + BsmtFullBath + (.5 * BsmtHalfBath)),#Kept by Ridge Regression
       Total_Porch_SF = (OpenPorchSF + X3SsnPorch + EnclosedPorch + ScreenPorch + WoodDeckSF),#Kept by Ridge Regression
+      
       HasPool = ifelse(PoolArea > 0, 1, 0),
       Has2ndFloor = ifelse(X2ndFlrSF > 0, 1, 0),
       HasGarage = ifelse(GarageArea > 0, 1, 0),#Kept by Ridge Regression
       HasBsmt = ifelse(TotalBsmtSF > 0, 1, 0),    
       HasFireplace = ifelse(Fireplaces > 0, 1, 0)#Kept by Ridge Regression
-    )
+    ) %>%
+    group_by(Neighborhood) %>%
+    mutate(LotFrontage = LotFrontage %>% replace_na(medianWithoutNA(LotFrontage))) %>%
+    ungroup()
+
   return(clean_data)
 }
 
@@ -272,16 +280,16 @@ c_lm <- train(SalePrice ~
                 Condition2 +
                 BldgType +
                 HouseStyle +
-                TotalSF * Neighborhood + 
-                TotalSF * OverallQual +
-                OverallQual * Neighborhood + #Can't plot this interaction of two features
-                OverallCond * Neighborhood + #Can't plot this interaction of two features
-                OverallQual * OverallCond + #Can't plot this interaction of two features
-                #GrLivArea * OverallQual +  # Good Interaction!
-                #GrLivArea * Neighborhood + # Good Interaction!
-                #TotalSF * Neighborhood +   # Good Interaction!
-                #OverallCond + Interaction
+                #Performance of TotalSF interaction was better, doing an interaction on both TotalSF and GrLivArea is somewhat redundant
+                #GrLivArea * OverallQual  + #Different slopes visible in plot 
+                #GrLivArea * Neighborhood + #Different slopes visible in plot
                 GrLivArea +
+                TotalSF * Neighborhood + #Different slopes visible in plot
+                TotalSF * OverallQual + #Different slopes visible in plot
+                TotalSF * OverallCond + #Different slopes visible in plot
+                #TotalSF + #Duplicate because interaction
+                OverallCond * Neighborhood + #Can't plot because this is a feature*feature interaction
+                OverallQual * Neighborhood + #Can't plot because this is a feature*feature interaction
                 YearBuilt +
                 YearRemodAdd +
                 RoofStyle +
@@ -296,16 +304,18 @@ c_lm <- train(SalePrice ~
                 BsmtQual +
                 BsmtCond +
                 BsmtExposure +
-                BsmtFinSF1 * BsmtFinType1 + 
-                BsmtFinSF2 * BsmtFinType2 +
+                BsmtFinType1 +
+                BsmtFinSF1 + 
+                BsmtFinType2 +
+                BsmtFinSF2 +
                 BsmtUnfSF + 
                 TotalBsmtSF +
                 Heating +
                 HeatingQC +
                 CentralAir +
                 Electrical +
-                #X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
-                #X2ndFlrSF +  # Highly correlated
+                #   X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
+                #   X2ndFlrSF +
                 LowQualFinSF +
                 BsmtFullBath +
                 BsmtHalfBath +
@@ -314,17 +324,17 @@ c_lm <- train(SalePrice ~
                 BedroomAbvGr +
                 KitchenAbvGr +
                 KitchenQual +
-                TotRmsAbvGrd +  # Highly correlated to 'GrLivArea'
+                #   TotRmsAbvGrd +  # Highly correlated to 'GrLivArea'
                 Functional +
                 Fireplaces +
                 FireplaceQu +
                 GarageType +
-                GarageYrBlt + # Highly correlated
+                #   GarageYrBlt +
                 GarageFinish +
                 GarageCars +
                 GarageCond +
                 GarageQual +
-                GarageArea +  # Highly correlated to 'GarageCars'
+                #   GarageArea +  # Highly correlated to 'GarageCars'
                 PavedDrive +
                 WoodDeckSF +
                 OpenPorchSF +
@@ -339,8 +349,7 @@ c_lm <- train(SalePrice ~
                 YrSold +
                 SaleType +
                 SaleCondition +
-                #TotalSF + #Duplicate because interaction
-                #Total_Sq_Footage + #Duplicate because interaction
+                #Total_Sq_Footage + #Way too similar to TotalSF
                 Total_Bathrooms +
                 Total_Porch_SF +
                 HasPool +
@@ -350,17 +359,16 @@ c_lm <- train(SalePrice ~
                 HasFireplace,
               data = train_data,
               preProcess = c("center", "scale"),
-              method = "glmnet")
+              method = "lm")
 
 
 #In-sample performance
 #R^2
-rsq(exp(train_data$SalePrice), exp(fitted(c_lm)))
+r2(exp(train_data$SalePrice), exp(fitted(c_lm)))
 #RSME
 rmse(exp(train_data$SalePrice), exp(fitted(c_lm)))
 #RSMLE
 rmsle(exp(train_data$SalePrice), exp(fitted(c_lm)))
-
 
 #Out-of-sample performance
 best_alpha <- c_lm$results[c_lm$results$alpha==c_lm$bestTune$alpha, ]
@@ -369,7 +377,6 @@ best_alpha_lambda <- best_alpha[best_alpha$lambda==c_lm$bestTune$lambda, ]
 best_alpha_lambda$Rsquared
 #RSMLE
 best_alpha_lambda$RMSE
-
 
 #90% Ridge Regression and 10# Lasso Regression Coefficients Removed
 c_lm_coeffs <- coef(c_lm$finalModel, c_lm$bestTune$lambda)
@@ -381,38 +388,43 @@ c_lm_Kept_Coef <- c_lm_coeffs[c_lm_coeffs[,1]!=0,0]
 nrow(c_lm_Kept_Coef)
 
 #Evaluating Interactions
-
-ggplot(train_data, aes(GrLivArea, SalePrice))+
-  theme_minimal() +
-  geom_smooth(method = "lm", se = F, aes(col = Neighborhood)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
-  labs("SalePrice ~ GrLivArea * Neighborhood", x = "GrLivArea") 
-
-ggplot(train_data, aes(GrLivArea, SalePrice))+
+ggplot(train_data, aes(TotalSF, SalePrice))+
   theme_minimal() +
   geom_smooth(method = "lm", se = F, aes(col = OverallQual)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
-  labs("SalePrice ~ GrLivArea * OverallQual", x = "GrLivArea") 
+  labs("SalePrice ~ TotalSF * OverallQual", x = "TotalSF")
 
-ggplot(train_data, aes(GrLivArea, SalePrice))+
+ggplot(train_data, aes(TotalSF, SalePrice))+
   theme_minimal() +
   geom_smooth(method = "lm", se = F, aes(col = Neighborhood)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
   labs("SalePrice ~ TotalSF * Neighborhood", x = "TotalSF")
 
-ggplot(train_data, aes(BsmtFinSF2, SalePrice))+
+ggplot(train_data, aes(TotalSF, SalePrice))+
   theme_minimal() +
-  geom_smooth(method = "lm", se = F, aes(col = BsmtFinType2)) +
+  geom_smooth(method = "lm", se = F, aes(col = OverallCond)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
-  labs("SalePrice ~ BsmtFinSF2 * BsmtFinType2", x = "BsmtFinSF2") 
+  labs("SalePrice ~ TotalSF * OverallCond", x = "TotalSF")
 
-ggplot(train_data, aes(BsmtFinSF1, SalePrice))+
+#Experimentation
+ggplot(train_data, aes(TotalBsmtSF, SalePrice))+
   theme_minimal() +
-  geom_smooth(method = "lm", se = F, aes(col = BsmtFinType1)) +
+  geom_smooth(method = "lm", se = F, aes(col = BsmtQual)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
-  labs("SalePrice ~ BsmtFinSF1 * BsmtFinType1", x = "BsmtFinSF1") 
+  labs("SalePrice ~ TotalBsmtSF * BsmtQual", x = "TotalBsmtSF")
 
+#Figure Demonstrating Transformation of the Outcome Variable
+train_data %>%
+  ggplot(aes(exp(TotalSF))) +
+  labs(x = "Sale Price (USD)") + 
+  geom_histogram()
 
+train_data %>%
+  ggplot(aes(TotalSF)) +
+  labs(x = "Natural Logarithm of Sale Price") + 
+  geom_histogram()
+
+#Predicting with the test_data
 submission_data <- test_data %>%
   select(Id) %>%
   mutate(SalePrice = exp(predict(c_lm, test_data)))
