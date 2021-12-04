@@ -372,7 +372,26 @@ c_lm_Kept_Coef <- c_lm_coeffs[c_lm_coeffs[,1]!=0,0]
 c_lm_Kept_Coef
 nrow(c_lm_Kept_Coef)
 
+#Evaluating Interactions
+ggplot(train_data, aes(GrLivArea, SalePrice))+
+  theme_minimal() +
+  geom_smooth(method = "lm", se = F, aes(col = OverallQual)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
+  labs("SalePrice ~ GrLivArea * OverallQual", x = "GrLivArea")
 
+ggplot(train_data, aes(GrLivArea, SalePrice))+
+  theme_minimal() +
+  geom_smooth(method = "lm", se = F, aes(col = Neighborhood)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
+  labs("SalePrice ~ GrLivArea * Neighborhood", x = "GrLivArea") 
+
+ggplot(train_data, aes(GrLivArea, SalePrice))+
+  theme_minimal() +
+  geom_smooth(method = "lm", se = F, aes(col = Neighborhood)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
+  labs("SalePrice ~ TotalSF * Neighborhood", x = "TotalSF")
+
+#Predicting with the test_data
 submission_data <- test_data %>%
   select(Id) %>%
   mutate(SalePrice = exp(predict(c_lm, test_data)))
