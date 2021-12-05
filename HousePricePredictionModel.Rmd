@@ -138,14 +138,14 @@ cleaner <- function(dirty_data) {
       X1stFlrSF = X1stFlrSF %>% replace_na(0),
       X2ndFlrSF = X2ndFlrSF %>% replace_na(0),
       
-      TotalFinSF = (BsmtFinSF1 + BsmtFinSF2 + X1stFlrSF + X2ndFlrSF),
+      TotalSF = (BsmtFinSF1 + BsmtFinSF2 + X1stFlrSF + X2ndFlrSF),
       Has2ndFloor = ifelse(X2ndFlrSF > 0, 1, 0),
 
       BsmtFinSF1 = log(BsmtFinSF1 +1), # Highly skewed right with most values at 0
       BsmtFinSF2 = log(BsmtFinSF2 +1), # Most values at 0
       #BsmtUnfSF = log(BsmtUnfSF), # Negative beneift when logged
       TotalBsmtSF = log(TotalBsmtSF +1), 
-      TotalFinSF = log(TotalFinSF + 1),
+      TotalSF = log(TotalSF + 1),
       #   X1stFlrSF = log(X1stFlrSF), # No benefit in logging
       #   X2ndFlrSF = log(X2ndFlrSF +1),
       LowQualFinSF = log(LowQualFinSF +1),
@@ -341,8 +341,8 @@ c_lm <- train(SalePrice ~
                 YrSold +
                 SaleType +
                 SaleCondition +
-                TotalFinSF +
-                TotalFinSF * Neighborhood +
+                TotalSF +
+                TotalSF * Neighborhood +
                 Total_Bathrooms +
                 Total_Porch_SF +
                 HasPool +
@@ -410,6 +410,51 @@ print(c_rf)
 ```
 
 It doesn't perform as well as our linear model, so we will proceed with using the linear model for predicting outcomes.
+
+
+## Visualize the data
+
+In order to help us understand how the data is interacting with itself, we will run some visualizations between features.
+
+```{r}
+#Evaluating Interactions
+ggplot(train_data, aes(TotalSF, SalePrice))+
+  theme_minimal() +
+  geom_smooth(method = "lm", se = F, aes(col = OverallQual)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
+  labs("SalePrice ~ TotalSF * OverallQual", x = "TotalSF")
+
+ggplot(train_data, aes(TotalSF, SalePrice))+
+  theme_minimal() +
+  geom_smooth(method = "lm", se = F, aes(col = Neighborhood)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
+  labs("SalePrice ~ TotalSF * Neighborhood", x = "TotalSF")
+
+ggplot(train_data, aes(TotalSF, SalePrice))+
+  theme_minimal() +
+  geom_smooth(method = "lm", se = F, aes(col = OverallCond)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
+  labs("SalePrice ~ TotalSF * OverallCond", x = "TotalSF")
+
+#Experimentation
+ggplot(train_data, aes(TotalBsmtSF, SalePrice))+
+  theme_minimal() +
+  geom_smooth(method = "lm", se = F, aes(col = BsmtQual)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
+  labs("SalePrice ~ TotalBsmtSF * BsmtQual", x = "TotalBsmtSF")
+
+#Figure Demonstrating Transformation of the Outcome Variable
+train_data %>%
+  ggplot(aes(exp(TotalSF))) +
+  labs(x = "Sale Price (USD)") + 
+  geom_histogram()
+
+train_data %>%
+  ggplot(aes(TotalSF)) +
+  labs(x = "Natural Logarithm of Sale Price") + 
+  geom_histogram()
+
+```
 
 
 ## Creating the submission file
