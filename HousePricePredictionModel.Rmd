@@ -31,7 +31,7 @@ In this source code we import, clean, and impute the data, and then we build a l
 
 ## Custom Functions
 
-In order to primarily evaluate the models, we creates custom functions to see the R2, RMSE, and RMSLE of the models.
+In order to primarily evaluate the models, we creates custom functions to see the R2, RMSE, and RMSLE of the models. We added a calculation to determine the mode in order to impute data in the cleaning step.
 
 ```{r cars}
 # Define our RMSE and RMSLE functions to evaluate our model
@@ -143,7 +143,7 @@ cleaner <- function(dirty_data) {
 
       BsmtFinSF1 = log(BsmtFinSF1 +1), # Highly skewed right with most values at 0
       BsmtFinSF2 = log(BsmtFinSF2 +1), # Most values at 0
-      #BsmtUnfSF = log(BsmtUnfSF), # Negative beneift when logged
+      #BsmtUnfSF = log(BsmtUnfSF), # Negative benefit when logged
       TotalBsmtSF = log(TotalBsmtSF +1), 
       TotalSF = log(TotalSF + 1),
       #   X1stFlrSF = log(X1stFlrSF), # No benefit in logging
@@ -202,9 +202,9 @@ cleaner <- function(dirty_data) {
       X3SsnPorch = log(X3SsnPorch +1),
       EnclosedPorch = log(EnclosedPorch +1),
       #   ScreenPorch = log(ScreenPorch), # No benefit in logging
-      #   WoodDeckSF = log(WoodDeckSF), # No beneift in logging
+      #   WoodDeckSF = log(WoodDeckSF), # No benefit in logging
      
-      #   PoolArea = log(PoolArea), # No benfit in logging
+      #   PoolArea = log(PoolArea), # No benefit in logging
       HasPool = ifelse(PoolArea > 0, 1, 0),
       PoolQC = PoolQC %>% replace_na("NoPool"), #NAs should specify no pool # HAS NAs
       PoolQC = factor(PoolQC, levels = c("NoPool", "Fa", "TA", "Gd", "Ex")), # HAS NAs
@@ -231,7 +231,7 @@ cleaner <- function(dirty_data) {
 
 ## Read data into environment
 
-Now that we have definied a function to clean this data, we will import the data, run it through the cleaner function, and save it to a variable.
+Now that we have defined a function to clean this data, we will import the data, run it through the cleaner function, and save it to a variable.
 
 ```{r}
 # Read in the data from CSV to RStudio
@@ -252,6 +252,8 @@ complete.cases(test_data) %>% all
 # test_data %>%
 #    sapply(function(x) sum(is.na(x)))
 ```
+
+Looks like the data is complete with all 'NAs' now imputed.
 
 ## Build linear model
 
@@ -278,7 +280,6 @@ c_lm <- train(SalePrice ~
                 BldgType +
                 HouseStyle +
                 OverallQual * Neighborhood + 
-                OverallQual * GrLivArea +
                 OverallCond * Neighborhood +
                 YearBuilt +
                 YearRemodAdd +
@@ -305,9 +306,9 @@ c_lm <- train(SalePrice ~
                 CentralAir +
                 Electrical +
                 #   X1stFlrSF +  # Highly correlated to 'TotalBsmtSF'
-                #   X2ndFlrSF +
+                #   X2ndFlrSF +  # Highly correlated to 'TotalBsmtSF'
                 LowQualFinSF +
-                GrLivArea * Neighborhood +
+                GrLivArea +
                 BsmtFullBath +
                 BsmtHalfBath +
                 FullBath +
@@ -341,8 +342,9 @@ c_lm <- train(SalePrice ~
                 YrSold +
                 SaleType +
                 SaleCondition +
-                TotalSF +
                 TotalSF * Neighborhood +
+                TotalSF * OverallQual +
+                TotalSF * OverallCond +
                 Total_Bathrooms +
                 Total_Porch_SF +
                 HasPool +
@@ -392,10 +394,11 @@ nrow(c_lm_Kept_Coef)
 c_lm$bestTune
 ```
 
+Both our in-sample and out out-of-sample r-squared metrics look really strong as they are both at or above a 90% explanation of the data.
 
 ## Random Forest
 
-We will also use a Random Forest model to compare how well our linear model works. If the random forst is better, we will proceed with using the Random Forest for predictions.
+We will also use a Random Forest model to compare how well our linear model works. If the random forest is better, we will proceed with using the Random Forest for predictions.
 
 ```{r}
 set.seed(123)
@@ -422,36 +425,36 @@ ggplot(train_data, aes(TotalSF, SalePrice))+
   theme_minimal() +
   geom_smooth(method = "lm", se = F, aes(col = OverallQual)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
-  labs("SalePrice ~ TotalSF * OverallQual", x = "TotalSF")
+  labs(title = "SalePrice ~ TotalSF * OverallQual", x = "TotalSF")
 
 ggplot(train_data, aes(TotalSF, SalePrice))+
   theme_minimal() +
   geom_smooth(method = "lm", se = F, aes(col = Neighborhood)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
-  labs("SalePrice ~ TotalSF * Neighborhood", x = "TotalSF")
+  labs(title = "SalePrice ~ TotalSF * Neighborhood", x = "TotalSF")
 
 ggplot(train_data, aes(TotalSF, SalePrice))+
   theme_minimal() +
   geom_smooth(method = "lm", se = F, aes(col = OverallCond)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
-  labs("SalePrice ~ TotalSF * OverallCond", x = "TotalSF")
+  labs(title = "SalePrice ~ TotalSF * OverallCond", x = "TotalSF")
 
 #Experimentation
 ggplot(train_data, aes(TotalBsmtSF, SalePrice))+
   theme_minimal() +
   geom_smooth(method = "lm", se = F, aes(col = BsmtQual)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
-  labs("SalePrice ~ TotalBsmtSF * BsmtQual", x = "TotalBsmtSF")
+  labs(title = "SalePrice ~ TotalBsmtSF * BsmtQual", x = "TotalBsmtSF")
 
 #Figure Demonstrating Transformation of the Outcome Variable
 train_data %>%
   ggplot(aes(exp(TotalSF))) +
-  labs(x = "Sale Price (USD)") + 
+  labs(x = "Sale Price (USD)", title = "Distribution of Raw Sale Price") + 
   geom_histogram()
 
 train_data %>%
   ggplot(aes(TotalSF)) +
-  labs(x = "Natural Logarithm of Sale Price") + 
+  labs(x = "Natural Logarithm of Sale Price", title = "Distribution of log Sales Price") + 
   geom_histogram()
 
 ```
@@ -469,4 +472,4 @@ submission_data <- test_data %>%
 write.csv(submission_data, "submission_file.csv", row.names=FALSE)
 ```
 
-The submission file has been created. Now the output predictins can be loaded into Kaggle for evaluation.
+The submission file has been created. Now the output predictions can be loaded into Kaggle for evaluation.
